@@ -21,6 +21,7 @@ from .common import (
 from .enemy import EnemyMixin
 from .friendly import FriendlyMixin
 from .players import PlayersMixin
+from .range import RangeMixin
 from .request import (
     TIMES,
     WINDS,
@@ -30,7 +31,7 @@ from .request import (
 from .scripting import ScriptingMixin
 
 
-class Builder(EnemyMixin, FriendlyMixin, PlayersMixin, ScriptingMixin, BriefingMixin):
+class Builder(EnemyMixin, FriendlyMixin, PlayersMixin, RangeMixin, ScriptingMixin, BriefingMixin):
     """Builds one mission. The mixins hold each part of the build; this class holds the
     shared state and the order the parts run in."""
 
@@ -94,7 +95,11 @@ class Builder(EnemyMixin, FriendlyMixin, PlayersMixin, ScriptingMixin, BriefingM
         self.fmt = fmt_latlon
         self.type_name = type_name
         self.cap_flag = None
+        self.heli_home = self.home
+        self.flight_bases = {}      # (callsign, number) -> airfield, when parking ran out
         objectives.reset_flags()
+        if req.mission_type == "range":
+            self.setup_range_layout()
 
 
     # --------------------------------------------------------------- building

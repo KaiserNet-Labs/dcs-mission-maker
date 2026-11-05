@@ -24,6 +24,7 @@ datas += [
     (str(ROOT / "app" / "templates"), "app/templates"),
     (str(ROOT / "app" / "static"), "app/static"),
     (str(ROOT / "app" / "data"), "app/data"),
+    (str(ROOT / "app" / "lua"), "app/lua"),
     (str(ROOT / "dcs-hook"), "dcs-hook"),
     (str(ROOT / "vendor"), "vendor"),
     (str(ROOT / "THIRD_PARTY.md"), "."),

@@ -77,7 +77,7 @@ def build_secondary(b, kind, pos, index):
 
 def add_secondaries(b):
     r = b.req
-    if not r.secondaries or r.mission_type in ("cap", "free"):
+    if not r.secondaries or r.mission_type in ("cap", "range"):
         return []
     kinds = list(r.secondary_kinds or [])
     pool = [k for k in SECONDARY_KINDS if k not in kinds]
@@ -140,7 +140,7 @@ POPUPS_BY_DIFFICULTY = {"easy": 0, "medium": 1, "hard": 2, "extreme": 3}
 
 def add_popups(b):
     n = POPUPS_BY_DIFFICULTY[b.req.difficulty]
-    if not b.req.popups or not n or b.req.mission_type in ("cap", "free", "antiship"):
+    if not b.req.popups or not n or b.req.mission_type in ("cap", "range", "antiship"):
         return
     ptype = b.forces["popup"]
     flag = zone_entry_flag(b, "Popup Zone", b.target, 25000)

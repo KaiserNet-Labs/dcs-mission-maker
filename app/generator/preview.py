@@ -7,6 +7,7 @@ from .. import eras, routes
 from ..aircraft import AIRCRAFT
 from ..theaters import THEATERS
 from .common import latlng_pair, resolve_offset
+from .range import flight_route, place_areas
 from .request import DIFFICULTIES, MISSION_TYPES
 
 
@@ -28,17 +29,19 @@ def map_points(req_json):
     home = terrain.airports[blue].position
     red_ap = terrain.airports[red.name].position
     mt = req_json.get("mission_type")
+    mt = "range" if mt == "free" else mt
     target = (resolve_offset(terrain, t.red_sea) if mt == "antiship" and t.red_sea
               else resolve_offset(terrain, red.inland))
+    layout = _range_layout(req_json, t, terrain, blue, red.name) if mt == "range" else None
+    if layout:
+        target = layout.ground_centroid()
     pts = [{"kind": "home", "label": f"Home: {blue}", "pos": latlng_pair(home)},
            {"kind": "enemy", "label": f"Enemy airfield: {red.name}", "pos": latlng_pair(red_ap)},
            {"kind": "bulls", "label": "Bullseye", "pos": latlng_pair(home.lerp(target, 0.5))}]
     if mt == "cap":
         pts.append({"kind": "target", "label": "CAP station", "pos": latlng_pair(home.lerp(red_ap, 0.45))})
-    elif mt != "free":
+    elif mt != "range":
         pts.append({"kind": "target", "label": "Target area", "pos": latlng_pair(target)})
-    else:
-        pts.append({"kind": "target", "label": "Range area", "pos": latlng_pair(target)})
     if t.blue_carrier and any(f.get("base") == "carrier" for f in req_json.get("flights", [])):
         pts.append({"kind": "carrier", "label": "Carrier", "pos": latlng_pair(resolve_offset(terrain, t.blue_carrier))})
     nm = home.distance_to_point(target) / 1852
@@ -51,6 +54,12 @@ def map_points(req_json):
         origin = carrier if on_carrier else home
         heli = AIRCRAFT.get(f.get("aircraft"), {}).get("helicopter", False)
         tgt = home.lerp(red_ap, 0.45) if mt == "cap" else target
+        shape = mt if mt in MISSION_TYPES else "cas"
+        if layout:
+            if heli and not on_carrier:
+                origin = terrain.airports[layout.heli_base].position
+            area, shape = flight_route(layout, f.get("role") or "", heli)
+            tgt = area.pos if area else target
         overrides = {}
         for key, val in (f.get("route") or {}).items():
             key = "ingress" if key == "transit" else key
@@ -61,12 +70,34 @@ def map_points(req_json):
                     continue
                 if pt.distance_to_point(tgt) < 400000:
                     overrides[key] = pt
-        steps = routes.plan(origin, origin, tgt, mt if mt in MISSION_TYPES else "cas", heli,
+        steps = routes.plan(origin, origin, tgt, shape, heli,
                             overrides, recovery_heading=carrier_hdg if on_carrier else None)
         flight_routes.append({"origin": latlng_pair(origin), "steps": [
             {"key": s_["key"], "name": s_["name"], "pos": latlng_pair(s_["pos"]),
              "editable": s_["key"] in routes.EDITABLE} for s_ in steps]})
-    return {"points": pts, "distance_nm": round(nm), "routes": flight_routes}
+    out = {"points": pts, "distance_nm": round(nm), "routes": flight_routes}
+    if layout:
+        out["range_areas"] = [{"id": a.area.id, "label": a.area.label, "purpose": a.area.purpose,
+                               "radius": a.area.radius_m, "pos": latlng_pair(a.pos), "moved": a.moved}
+                              for a in layout.areas]
+    return out
+
+
+
+def _range_layout(req_json, t, terrain, blue, red_name):
+    flights = [(f.get("aircraft"), int(f.get("slots") or 1)) for f in req_json.get("flights", [])
+               if f.get("aircraft") in AIRCRAFT]
+    era = req_json.get("era") if req_json.get("era") in eras.ERAS else eras.detect(flights)[0]
+    home = terrain.airports[blue].position
+    overrides = {}
+    for key, val in (req_json.get("range_areas") or {}).items():
+        try:
+            pt = Point.from_latlng(LatLng(float(val[0]), float(val[1])), terrain)
+        except (TypeError, ValueError, IndexError):
+            continue
+        if pt.distance_to_point(home) < 400000:
+            overrides[key] = pt
+    return place_areas(t, terrain, blue, red_name, era, overrides)
 
 
 def preview(req_json: dict) -> dict:

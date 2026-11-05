@@ -171,14 +171,8 @@ class EnemyMixin:
             "bring them home to the MASH at your airfield. Everyone else: escort the helicopters "
             "and destroy the search party before it reaches the pilot.")
 
-    def objective_free(self):
-        self.brief.tasking.append(
-            "No hostile forces. Free flight / training: practice navigation, formation, "
-            f"refueling and landings. Range area is near {self.red_airport.name} "
-            f"({fmt_latlon(self.target)}).")
-
     def add_ewr(self):
-        if self.req.mission_type == "free" or not self.forces.get("ewr"):
+        if self.req.mission_type == "range" or not self.forces.get("ewr"):
             return
         off = self.red_base.inland
         pos = self.red_airport.position.point_from_heading(off.bearing, (off.distance_km + 4) * 1000)
@@ -211,7 +205,7 @@ class EnemyMixin:
 
     def add_enemy_air(self):
         r = self.req
-        if r.mission_type in ("cap", "free") or r.enemy_air == "none":
+        if r.mission_type in ("cap", "range") or r.enemy_air == "none":
             return
         flag = (objectives.zone_entry_flag(self, "Enemy CAP Trigger", self.target, 90000)
                 if r.dynamic_air else None)

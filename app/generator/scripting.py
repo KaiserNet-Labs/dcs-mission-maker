@@ -8,6 +8,7 @@ from dcs.forcedoptions import ForcedOptions
 from dcs.triggers import TriggerOnce, TriggerStart
 
 from .. import scripts
+from .range import LUA_FILE as RANGE_LUA
 from .request import F10_VIEWS, LABELS, MISSION_TYPES
 
 # Debrief flags: DEBRIEF_FLAG = all objectives done, DEBRIEF_FLAG + 1 + i = objective i done.
@@ -54,6 +55,10 @@ class ScriptingMixin:
             elif sid == "hound":
                 start.add_action(DoScriptFile(self.m.map_resource.add_resource_file(
                     self.write_glue("hound", scripts.hound_glue([self.awacs_unit])))))
+        if self.req.mission_type == "range":
+            start.add_action(DoScriptFile(self.m.map_resource.add_resource_file(
+                self.write_glue("range", self.range_config_lua()))))
+            start.add_action(DoScriptFile(self.m.map_resource.add_resource_file(RANGE_LUA)))
         if loaded:
             self.m.triggerrules.triggers.append(start)
             self.brief.situation.append("Scripts: " + ", ".join(loaded) + ".")

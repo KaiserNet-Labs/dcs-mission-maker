@@ -87,6 +87,7 @@ header .update { margin-top: 8px; color: var(--text); }
 @media (max-width: 720px) { .aiflight { grid-template-columns: 1fr 1fr; } }
 .badge { font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 1px solid; margin-left: 4px; }
 .badge.ok { color: var(--ok); } .badge.bad { color: var(--err); }
+.range-handle { background: #ff9f1a; color: #111; border-radius: 4px; padding: 1px 5px; font: 600 11px/16px system-ui, sans-serif; white-space: nowrap; width: auto !important; height: auto !important; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .route-handle { background: #fff; border: 2px solid #e0a526; border-radius: 50%; width: 14px !important; height: 14px !important; }
 .opt-grid { display: grid; gap: 8px 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-top: 12px; }
 

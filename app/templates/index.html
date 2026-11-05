@@ -68,6 +68,7 @@
         flight. Callsigns are real DCS callsigns, so AWACS and ATC call you by name.</p>
       <div id="flights"></div>
       <button type="button" id="add_flight">+ Add another flight</button>
+      <button type="button" id="use_roster" class="hidden" title="Two 2-ships of each popular aircraft (one hot start, one cold), each with its own Flight Role">Use the Default Roster</button>
     </section>
 
     <section>
@@ -138,6 +139,7 @@
     <section class="summary">
       <h3>Mission summary</h3>
       <div id="map" class="hidden"></div>
+      <p class="note hidden" id="range_note">Orange circles are the Range Areas. Drag a label to move an area: check the new spot is on land in the Mission Editor, since this app can't tell land from sea.</p>
       <div class="row hidden" id="route_tools" style="margin:-4px 0 10px">
         <label for="route_flight" style="margin:0">Drag the route for</label>
         <select id="route_flight" style="width:auto"></select>

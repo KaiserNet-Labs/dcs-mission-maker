@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from dcs.forcedoptions import ForcedOptions
 
-from .. import ai, eras, liveries, mods, objectives, scripts
+from .. import ai, eras, liveries, mods, objectives, range_catalog, scripts
 from ..aircraft import AIRCRAFT
 from ..comms import callsign_options
 from ..theaters import THEATERS
@@ -17,8 +17,9 @@ MISSION_TYPES = {
     "strike": "Precision Strike",
     "antiship": "Anti-Ship Strike",
     "csar": "Combat Search & Rescue",
-    "free": "Free Flight / Training",
+    "range": "Training Range",
 }
+LEGACY_MISSION_TYPES = {"free": "range"}   # Free Flight became Training Range (ADR 0002)
 DIFFICULTIES = ["easy", "medium", "hard", "extreme"]
 TIMES = {"dawn": (6, 0), "morning": (8, 30), "noon": (12, 0),
          "afternoon": (15, 30), "dusk": (18, 45), "night": (22, 0)}
@@ -45,6 +46,7 @@ class FlightRequest:
     dtc: bool = True           # write a data cartridge when the jet supports one
     pilots: list[str] = field(default_factory=list)  # names per player seat (sign-ups)
     route: dict = field(default_factory=dict)        # {"transit": [lat, lng], "ip": [lat, lng]}
+    role: str = ""             # Training Range Flight Role: aa | sead | cas | strike | antiship
 
 
 @dataclass
@@ -97,6 +99,7 @@ class MissionRequest:
     mods: list[str] = field(default_factory=list)   # community mods your group has
     srs: str = ""                   # SRS voice server for this mission, "" = SRS_ADDRESS default
     srs_note: str = ""              # e.g. where the password is (never the password itself)
+    range_areas: dict = field(default_factory=dict)  # Training Range: area id -> [lat, lng] dragged
 
     @classmethod
     def from_json(cls, d: dict) -> "MissionRequest":
@@ -105,6 +108,8 @@ class MissionRequest:
                     for f in items or []]
         fields = {k: v for k, v in d.items()
                   if k in cls.__dataclass_fields__ and k not in ("flights", "ai_flights")}
+        if fields.get("mission_type") in LEGACY_MISSION_TYPES:
+            fields["mission_type"] = LEGACY_MISSION_TYPES[fields["mission_type"]]
         return cls(flights=build(FlightRequest, d.get("flights")),
                    ai_flights=build(AIFlightRequest, d.get("ai_flights")), **fields)
 
@@ -128,8 +133,9 @@ def validate(r: MissionRequest) -> None:
         raise MissionError("Bad time/weather/wind")
     if not r.flights:
         raise MissionError("Add at least one flight")
-    if len(r.flights) > 8:
-        raise MissionError("Maximum 8 flights")
+    max_flights = range_catalog.MAX_FLIGHTS if r.mission_type == "range" else 8
+    if len(r.flights) > max_flights:
+        raise MissionError(f"Maximum {max_flights} flights")
     if r.mission_type == "antiship" and not t.red_sea:
         raise MissionError(f"{t.label} has no sea: pick another mission type")
     try:
@@ -163,6 +169,12 @@ def validate(r: MissionRequest) -> None:
         raise MissionError("Extra objectives: 0 to 2")
     if any(k not in objectives.SECONDARY_KINDS for k in r.secondary_kinds or []):
         raise MissionError("Unknown objective kind")
+    if r.mission_type == "range":
+        r.scripts = scripts.resolve(list(r.scripts) + ["moose"])
+        r.range_areas = {k: v for k, v in (r.range_areas or {}).items()
+                         if isinstance(k, str) and isinstance(v, (list, tuple)) and len(v) == 2}
+        for f in r.flights:
+            f.role = f.role if f.role in range_catalog.FLIGHT_ROLES else ""
     if r.mission_type == "csar":
         r.scripts = scripts.resolve(list(r.scripts) + ["csar"])
         if not any(AIRCRAFT[f.aircraft]["helicopter"] for f in r.flights):

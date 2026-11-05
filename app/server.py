@@ -33,6 +33,7 @@ from . import (
     mission_store,
     mods,
     paths,
+    range_catalog,
     scripts,
     settings,
     srs_eam,
@@ -193,6 +194,9 @@ def options():
         "mission_ttl_hours": mission_store.ttl_seconds() / 3600,
         "mods": mods.catalog(),
         "hook": _hook_status(),
+        "default_roster": range_catalog.default_roster(True),
+        "flight_roles": list(range_catalog.FLIGHT_ROLES.items()),
+        "max_flights": {"range": range_catalog.MAX_FLIGHTS, "other": 8},
     })
 
 

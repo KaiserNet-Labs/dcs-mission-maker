@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .. import eras, integrations, kneeboard, navdata, threatdb
 from .common import JTAC_FREQ, bearing_nm, bra, fmt_latlon, latlng_pair
+from .range import TEMPLATE_PREFIX
 from .request import MISSION_TYPES, TIMES
 from .scripting import DEBRIEF_FLAG
 
@@ -104,8 +105,12 @@ class BriefingMixin:
 
     def waypoint_note(self, w, card):
         """One line on what the flight does at a waypoint, for this mission type."""
-        mt, key = self.req.mission_type, w.get("key", "")
+        mt, key = card.get("tasking") or self.req.mission_type, w.get("key", "")
         heli = card["type"].helicopter
+        if self.req.mission_type == "range" and key == "target" and card.get("range_area"):
+            area = card["range_area"]
+            return (f"{area} Range Area: spawn what you want to practise against from F10 > Other > "
+                    f"Training Range > {area}. Practice Targets sit at the centre and don't shoot back.")
         tgt_what = {
             "cas": "Target area: friendly troops in contact. "
                    + (f"Check in with JTAC Axeman on {JTAC_FREQ}.000 AM for targets and the laser code."
@@ -139,7 +144,8 @@ class BriefingMixin:
         if key == "cap2":
             return "Far end of the CAP race-track. Turn back toward CAP."
         if key == "range":
-            return "Training range: no threats. Practise whatever you briefed."
+            return ("Training Range: nothing hostile until someone spawns it from F10 > Other > "
+                    "Training Range. Practise whatever you briefed.")
         if key == "egress" and mt == "cap":
             return "Leave the station on a different line than you came in on. Fence out when clear."
         if key == "egress":
@@ -167,8 +173,9 @@ class BriefingMixin:
                              latlng_pair(o["center"].point_from_heading(o["course"], half))]}
 
         primary = next((o for o in self.objectives if o["name"] == "Primary objective"), {})
-        objectives_out = [{"name": "Primary", "what": MISSION_TYPES[r.mission_type],
-                           "pos": latlng_pair(self.target), "hidden": False, "flag": primary.get("flag")}]
+        objectives_out = [] if r.mission_type == "range" else [
+            {"name": "Primary", "what": MISSION_TYPES[r.mission_type],
+             "pos": latlng_pair(self.target), "hidden": False, "flag": primary.get("flag")}]
         objectives_out += [{"name": o["name"], "what": o["what"], "pos": latlng_pair(o["pos"]),
                             "hidden": bool(r.chain), "flag": o.get("flag")} for o in self.secondaries]
         flights = []
@@ -214,6 +221,9 @@ class BriefingMixin:
                      if self.jtac_pos else None),
             "flights": flights, "ai_flights": self.ai_cards,
             "oob": self.order_of_battle(),
+            "range": ([{**a, "pos": latlng_pair(a["pos"]), "text": fmt_latlon(a["pos"]),
+                        "bulls": self.bulls(a["pos"])} for a in self.range_brief()]
+                      if r.mission_type == "range" else None),
         }
 
     def order_of_battle(self):
@@ -225,7 +235,8 @@ class BriefingMixin:
         for g in surface + air:
             flying = g in air
             # Pop-ups and not-yet-unlocked targets are "possible", with no position.
-            secret = g.name.startswith("Popup") or (g.late_activation and not flying)
+            secret = (g.name.startswith(("Popup", TEMPLATE_PREFIX))
+                      or (g.late_activation and not flying))
             for u in g.units:
                 key = threatdb.key_for(u.type, g.name)
                 if not key:

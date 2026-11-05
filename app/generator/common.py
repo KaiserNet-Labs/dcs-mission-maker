@@ -18,7 +18,7 @@ TASK_PREFERENCE = {
     "strike": [task.PinpointStrike, task.GroundAttack, task.CAS],
     "antiship": [task.AntishipStrike, task.GroundAttack, task.CAS],
     "csar": [task.CAS, task.Escort, task.GroundAttack, task.Transport],
-    "free": [],
+    "range": [],
 }
 
 AAA_SITES = {eras.FLAK88[0], eras.FLAK88_HEAVY[0], eras.ALLIED_AA[0],

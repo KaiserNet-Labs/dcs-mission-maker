@@ -33,8 +33,19 @@ jobs:
         run: docker run --rm -v "$PWD:/srv/src:ro" -w /srv/src dcs-mission-maker python -m tests.api
       - name: Mission smoke test (quick sample)
         run: docker run --rm -v "$PWD:/srv/src:ro" -w /srv/src dcs-mission-maker python -m tests.smoke --quick
+      - name: Training Range checks
+        run: docker run --rm -v "$PWD:/srv/src:ro" -w /srv/src dcs-mission-maker python -m tests.range
       - name: Hook Lua syntax
         run: sudo apt-get install -y -qq lua5.1 && luac5.1 -p dcs-hook/dmm_reporter.lua
+      - name: Training Range runtime (Lua 5.1, DCS stubbed)
+        run: |
+          mkdir -p /tmp/lua && chmod 777 /tmp/lua   # the image runs as its own unprivileged user
+          docker run --rm -v "$PWD:/srv/src:ro" -v /tmp/lua:/lua -w /srv/src dcs-mission-maker \
+            python -m tests.smoke --quick --lua-dir /lua
+          luac5.1 -p app/lua/training_range.lua
+          for f in /tmp/lua/*range_config.lua; do luac5.1 -p "$f"; done
+          lua5.1 tests/lua/test_training_range.lua
+          lua5.1 tests/lua/test_generated_config.lua /tmp/lua/*range_config.lua
 
   # Windows: tests without Docker, the app build, and its installer (installed, run, uninstalled).
   windows:

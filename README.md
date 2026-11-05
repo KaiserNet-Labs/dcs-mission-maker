@@ -124,7 +124,8 @@ Generate button.
 | | |
 |---|---|
 | **Maps** | Caucasus, Persian Gulf, Syria, Nevada, Marianas, Sinai, Kola, South Atlantic (Falklands, 1982), Germany (Cold War), Normandy (1944), The Channel |
-| **Missions** | CAP, CAS, SEAD/DEAD, Precision Strike, Anti-Ship, Combat Search & Rescue, Free Flight |
+| **Missions** | CAP, CAS, SEAD/DEAD, Precision Strike, Anti-Ship, Combat Search & Rescue, Training Range |
+| **Training Range** | A long-running practice mission for your server. Six Range Areas (SEAD/DEAD, CAS, Strike, Air-to-Air, Anti-Ship on maps with sea, and a Helicopter area close to the helicopters' base) are drawn on the F10 map, each with Practice Targets that don't shoot back and come back a few minutes after they're destroyed (bombing circle, strafe pit, target vehicles and buildings, a radar for HARM shots). Players spawn enemy forces from **F10 > Other > Training Range**: pick an area, a role (Medium SAM, Armour column, Fighter pair...) and either the era default or a specific system from Vietnam to Modern (SA-2 to SA-10, T-55 to T-90, MiG-21 to Su-30...). Each area has its own difficulty (Easy: average skill, radars always on; Normal; Hard: excellent skill) and a Clear command. Armour, troops, convoys and aircraft can repeat until cleared; enemy aircraft stay inside their area. Caps stop the server filling up (6 spawns per area, 8 enemy aircraft, 25 in total). **Use the Default Roster** fills in two 2-ships (hot and cold start) of 13 popular aircraft, each with a Flight Role that sets its loadout and the area its route goes to; flights that don't fit the home field start at the next friendly field. Drag the areas on the builder map; since the app can't tell land from sea, check a moved area in the Mission Editor. WWII and Korea ranges get their own areas (Flak / Ground Attack instead of SEAD/DEAD). Older Free Flight setups open as a Training Range. |
 | **Extra objectives** | Up to two more targets (air defense site, artillery battery, supply convoy, early-warning radar), either all briefed up front or unlocked one at a time with a radio call and coordinates when the previous one dies. |
 | **Living battlefield** | CAS columns push toward friendly armor holding a front line drawn on the F10 map. Hidden pop-up air defenses switch on when you get close (more on higher difficulty). Enemy fighters scramble when you approach instead of on a timer. |
 | **CSAR** | A downed pilot past the enemy airfield and a search party closing in. Helicopters find the survivor through MOOSE CSAR (beacon, smoke, flares) and bring them to the MASH; everyone else escorts and kills the search party. |
@@ -270,6 +271,8 @@ docker run --rm -v $PWD:/src:ro -w /src dcsmission-dcs-mission-maker python -m t
 # Full run (~900 missions across maps, mission types, eras, every aircraft, scripts and mods),
 # built in parallel on every CPU (--jobs N to limit):
 docker run --rm -v $PWD:/src:ro -w /src dcsmission-dcs-mission-maker python -m tests.smoke
+# Training Range: catalogue, area placement, templates vs the Lua config, legacy setups:
+docker run --rm -v $PWD:/src:ro -w /src dcsmission-dcs-mission-maker python -m tests.range
 # API: sign-ups, publishing, Discord (against a fake webhook), server reports:
 docker run --rm -v $PWD:/src:ro -w /src dcsmission-dcs-mission-maker python -m tests.api
 # Also dump the mission tables and script configs for a Lua syntax check:
@@ -277,6 +280,10 @@ mkdir -p /tmp/lua && docker run --rm -v $PWD:/src:ro -v /tmp/lua:/lua -w /src \
   dcsmission-dcs-mission-maker python -m tests.smoke --lua-dir /lua
 docker run --rm -v /tmp/lua:/lua:ro debian:stable-slim sh -c \
   'apt-get update -qq && apt-get install -y -qq lua5.1 >/dev/null && for f in /lua/*; do luac5.1 -p "$f"; done'
+# Training Range runtime under Lua 5.1 with DCS stubbed: unit tests, then every generated config
+docker run --rm -v $PWD:/src:ro -v /tmp/lua:/lua:ro -w /src debian:stable-slim sh -c \
+  'apt-get update -qq && apt-get install -y -qq lua5.1 >/dev/null && lua5.1 tests/lua/test_training_range.lua \
+   && lua5.1 tests/lua/test_generated_config.lua /lua/*range_config.lua'
 ```
 
 | File | Purpose |
@@ -300,6 +307,10 @@ docker run --rm -v /tmp/lua:/lua:ro debian:stable-slim sh -c \
 | `app/theaters.py` | Per-map bases, target areas, sea and carrier positions |
 | `app/aircraft.py` | Flyable aircraft catalog and display names |
 | `app/objectives.py` | Extra/chained objectives, front line, pop-up threats, zone triggers |
+| `app/range_catalog.py` | Training Range catalogue: Range Areas, Spawn Roles, Spawnable systems per side, era defaults, Practice Targets, Default Roster, caps |
+| `app/generator/range.py` | Training Range build: area placement, Practice Targets, spawn templates, the generated Lua config |
+| `app/lua/training_range.lua`, `tests/lua/` | The in-game Training Range runtime (F10 menu, caps, clear, difficulty, repeats, Practice Target respawns) and its Lua tests |
+| `CONTEXT.md`, `docs/adr/` | Domain glossary and architecture decision records |
 | `app/navdata.py` | Airfield TACAN/ILS/tower data and runway in use |
 | `app/mods.py` | Community mod aircraft and units |
 | `app/integrations.py` | Discord webhook, server folder and SFTP publishing |

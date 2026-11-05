@@ -4,11 +4,12 @@ from dcs.mapping import LatLng, Point
 from dcs.mission import StartType
 from dcs.terrain import NoParkingSlotError
 
-from .. import dtc, liveries, routes
+from .. import dtc, liveries, range_catalog, routes
 from ..aircraft import AIRCRAFT
 from ..comms import CommPlan, apply_callsign, radio_table, reset_stn
 from ..loadouts import apply_loadout
 from .common import SKILLS, pick_task
+from .range import flight_route
 from .request import TIMES, MissionError
 
 
@@ -23,12 +24,15 @@ class PlayersMixin:
         reset_stn()
         for idx, f in enumerate(r.flights):
             a = AIRCRAFT[f.aircraft]
-            maintask = pick_task(a["cls"], r.mission_type)
+            tasking = self.flight_tasking(f)
+            maintask = pick_task(a["cls"], tasking)
             flight_name = f"{f.callsign} {f.number}"
             group_name = f"{f.squadron} - {flight_name}" if f.squadron else flight_name
+            if r.mission_type == "range" and f.role:
+                group_name += f" - {range_catalog.FLIGHT_ROLES[f.role]}"
 
             heli = a["helicopter"]
-            cruise_alt = 300 if heli else (7000 if r.mission_type == "cap" else 5500)
+            cruise_alt = 300 if heli else (7000 if tasking == "cap" else 5500)
             cruise_spd = 220 if heli else 750
             if not heli and a["cls"].max_speed and a["cls"].max_speed < 800:  # warbirds/trainers
                 cruise_alt, cruise_spd = 3000, 450
@@ -38,7 +42,7 @@ class PlayersMixin:
             for u, pilot in zip(g.units, f.pilots, strict=False):
                 if pilot:
                     u.name = f"{u.name} ({pilot})"
-            loadout, weapons = apply_loadout(g, r.mission_type, f.loadout or None)
+            loadout, weapons = apply_loadout(g, tasking, f.loadout or None)
             if f.livery and liveries.known(f.aircraft, f.livery):
                 for u in g.units:
                     u.livery_id = f.livery
@@ -61,9 +65,9 @@ class PlayersMixin:
                 self.heli_groups.append(group_name)
 
             carrier = f.base == "carrier"
-            origin = self.carrier.position if carrier else self.home.position
-            nm = origin.distance_to_point(self.target) / 1852
-            base = self.carrier.name if carrier else self.home.name
+            origin = self.carrier.position if carrier else self.flight_home(f).position
+            nm = origin.distance_to_point(self.flight_target(f)[0]) / 1852
+            base = self.carrier.name if carrier else self.flight_home(f).name
             kit = ", ".join(weapons) or "none"
             pilots = [f"{f.number}-{i} {p}" for i, p in enumerate(f.pilots, start=1) if p]
             crew = (f"{f.slots} seat{'s' if f.slots > 1 else ''}"
@@ -85,17 +89,61 @@ class PlayersMixin:
                 "name": flight_name, "aircraft": a["name"], "type": a["cls"],
                 "squadron": f.squadron, "seats": f.slots, "ai": f.ai_wingmen, "base": base,
                 "pilots": pilots, "timing": getattr(f, "timing", None),
-                "start": f.start, "loadout": f"{loadout}: {kit}",
+                "start": f.start, "loadout": f"{loadout}: {kit}", "tasking": tasking,
+                "range_area": self.flight_area_label(f),
                 "route": route, "origin": origin, "carrier": carrier,
                 "radios": radio_table(applied)})
             self.player_warnings(f, a, flight_name, nm, heli, weapons)
 
+    def flight_tasking(self, f):
+        """The mission type that sets this flight's task, loadout and route shape."""
+        if self.req.mission_type != "range":
+            return self.req.mission_type
+        return flight_route(self.range_layout, f.role, AIRCRAFT[f.aircraft]["helicopter"])[1]
+
+    def flight_target(self, f):
+        """(point the route is built around, route shape) for this flight."""
+        r = self.req
+        if r.mission_type == "cap":
+            return self.cap_station, "cap"
+        if r.mission_type != "range":
+            return self.target, r.mission_type
+        area, shape = flight_route(self.range_layout, f.role, AIRCRAFT[f.aircraft]["helicopter"])
+        return (area.pos if area else self.target), shape
+
+    def flight_area_label(self, f):
+        """The Range Area this flight's route goes to (Training Range only)."""
+        if self.req.mission_type != "range":
+            return None
+        area, _shape = flight_route(self.range_layout, f.role, AIRCRAFT[f.aircraft]["helicopter"])
+        return area.area.label if area else None
+
+    def flight_home(self, f):
+        """The airfield a flight starts from and lands at: in a Training Range, helicopters
+        use the friendly field closest to the Helicopter area, and a flight that found no
+        parking there moved to the next-nearest friendly field."""
+        moved = self.flight_bases.get((f.callsign, f.number))
+        if moved:
+            return moved
+        if self.req.mission_type == "range" and AIRCRAFT[f.aircraft]["helicopter"]:
+            return self.heli_home
+        return self.home
+
+    def overflow_fields(self, first, near):
+        """Friendly airfields to try after `first`, nearest to `near` (the flight's Range
+        Area) first. Training Range only."""
+        if self.req.mission_type != "range":
+            return []
+        others = [self.terrain.airports[b] for b in self.theater.blue_bases if b != first.name]
+        return sorted(others, key=lambda ap: ap.position.distance_to_point(near))
+
     def spawn_player_group(self, f, a, maintask, group_name, flight_name, cruise_alt, cruise_spd):
         """The flight's group: in the air, on the carrier or at the home field."""
         size = f.slots + f.ai_wingmen
+        home = self.flight_home(f)
         try:
             if f.start == "air":
-                origin = self.carrier.position if f.base == "carrier" else self.home.position
+                origin = self.carrier.position if f.base == "carrier" else home.position
                 pos = origin.point_from_heading(origin.heading_between_point(self.target), 8000)
                 return self.m.flight_group_inflight(self.blue, group_name, a["cls"], pos, cruise_alt,
                                                     cruise_spd, maintask=maintask, group_size=size)
@@ -103,12 +151,23 @@ class PlayersMixin:
                 return self.m.flight_group_from_unit(self.blue, group_name, a["cls"], self.carrier,
                                                      maintask=maintask, start_type=self.START_TYPES[f.start],
                                                      group_size=size)
-            return self.m.flight_group_from_airport(self.blue, group_name, a["cls"], self.home,
-                                                    maintask=maintask, start_type=self.START_TYPES[f.start],
-                                                    group_size=size)
+            for field in [home] + self.overflow_fields(home, self.flight_target(f)[0]):
+                try:
+                    g = self.m.flight_group_from_airport(
+                        self.blue, group_name, a["cls"], field, maintask=maintask,
+                        start_type=self.START_TYPES[f.start], group_size=size)
+                except NoParkingSlotError:
+                    continue
+                if field is not home:
+                    field.set_blue()
+                    self.flight_bases[(f.callsign, f.number)] = field
+                    self.warnings.append(f"{flight_name}: no parking left at {home.name}; "
+                                         f"starts at {field.name} instead.")
+                return g
+            raise NoParkingSlotError(home.name)
         except NoParkingSlotError as e:
             raise MissionError(
-                f"{self.home.name} ran out of parking for {a['name']} ({flight_name}). "
+                f"{home.name} ran out of parking for {a['name']} ({flight_name}). "
                 "Try fewer slots, a bigger base, or an air start.") from e
 
     def player_warnings(self, f, a, flight_name, nm, heli, weapons):
@@ -152,8 +211,9 @@ class PlayersMixin:
     def route_player(self, g, alt, spd, heli, f):
         """Adds waypoints and returns them as cartridge steerpoints."""
         r = self.req
-        origin = self.carrier.position if f.base == "carrier" else self.home.position
-        tgt = self.cap_station if r.mission_type == "cap" else self.target
+        home = self.flight_home(f)
+        origin = self.carrier.position if f.base == "carrier" else home.position
+        tgt, shape = self.flight_target(f)
         route = []
 
         def wp(pos, name, kind, key):
@@ -170,7 +230,7 @@ class PlayersMixin:
                     overrides[key] = pt
         carrier = f.base == "carrier"
         extra = [] if r.chain else [o["pos"] for o in self.secondaries]
-        plan = routes.plan(origin, origin, tgt, r.mission_type, heli, overrides, extra,
+        plan = routes.plan(origin, origin, tgt, shape, heli, overrides, extra,
                            recovery_heading=self.carrier_heading if carrier else None)
         for step in plan:
             kind = "HOME" if carrier and step["key"] == "return" else step["kind"]
@@ -179,8 +239,8 @@ class PlayersMixin:
             for p in g.points[1:]:
                 p.alt_type = "RADIO"
         if not carrier:
-            g.land_at(self.home)
-            route.append({"name": self.home.name, "pos": self.home.position, "alt": 0,
+            g.land_at(home)
+            route.append({"name": home.name, "pos": home.position, "alt": 0,
                           "speed": spd, "kind": "HOME", "key": "land"})
         self.apply_tot(g, f, origin, route, spd)
         return route
@@ -215,8 +275,8 @@ class PlayersMixin:
 
     def add_cartridge(self, g, f, flight_name, route, applied):
         name = dtc.cartridge_name(flight_name, f.aircraft)
-        dests = [] if f.base == "carrier" else [{"name": self.home.name,
-                                                 "pos": self.home.position}]
+        home = self.flight_home(f)
+        dests = [] if f.base == "carrier" else [{"name": home.name, "pos": home.position}]
         text = dtc.build(f.aircraft, name, self.terrain.name, route=route,
                          radios=applied, orbits=self.orbits, threats=self.threats,
                          dests=dests, carrier=self.carrier_info if f.base == "carrier" else None)

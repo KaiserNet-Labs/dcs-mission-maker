@@ -2,7 +2,7 @@
 
 Attack missions:  Join -> Push -> Ingress -> Target -> (objectives) -> Egress -> Return
 CAP:              Join -> Push -> CAP -> CAP 2 -> Egress -> Return
-Free flight:      Join -> Range -> Return
+Training Range:   Join -> Range -> Return (flights without a Flight Role)
 
 Egress turns off the attack axis toward the side away from the ingress, so
 flights don't go home over the defenses they came in through.
@@ -33,7 +33,7 @@ def plan(origin, recovery, target, mission_type, heli, overrides=None, extra_tar
         out.append({"key": key, "name": name, "kind": kind, "pos": ov.get(key) or pos})
         return out[-1]["pos"]
 
-    if mission_type == "free":
+    if mission_type == "range":
         add("join", "Join", "STPT", _between(origin, target, min(15000 * scale, d * 0.2)))
         last = add("range", "Range", "TGT", target)
     elif mission_type == "cap":

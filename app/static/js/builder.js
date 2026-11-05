@@ -10,7 +10,7 @@ const MISSION_HINTS = {
   strike: "Destroy a defended supply depot",
   antiship: "Sink an enemy naval group",
   csar: "Rescue a downed pilot before the enemy finds them (needs a helicopter)",
-  free: "No threats: practice, sightseeing",
+  range: "Spawn your own targets from the F10 menu: SEAD, CAS, strike, air-to-air and more",
 };
 const ERA_SHORT = { ww2: "WWII", korea: "Korea", vietnam: "Vietnam", coldwar: "Cold War", modern: "Modern" };
 
@@ -28,7 +28,25 @@ function fillSelect(sel, items, value) {
 const theater = () => OPT.theaters.find(t => t.key === $("theater").value);
 const flights = () => [...document.querySelectorAll(".flight")];
 
-function clearRoutes() { flights().forEach(d => d.dataset.route = ""); }
+function clearRoutes() { flights().forEach(d => d.dataset.route = ""); RANGE_AREAS = {}; }
+let RANGE_AREAS = {};          // Training Range: area id -> [lat, lng] the user dragged
+const isRange = () => radio("mission_type") === "range";
+const maxFlights = () => OPT.max_flights[isRange() ? "range" : "other"];
+// The mission type that picks a flight's loadout: its Flight Role on a Training Range.
+const ROLE_TASKING = { aa: "cap", sead: "sead", cas: "cas", strike: "strike", antiship: "antiship" };
+function flightTasking(div) {
+  if (!isRange()) return radio("mission_type");
+  if (AC[div.querySelector(".aircraft").value].helicopter) return "cas";
+  return ROLE_TASKING[div.querySelector(".role").value] || "range";
+}
+function useRoster() {
+  const t = theater();
+  $("flights").innerHTML = "";
+  OPT.default_roster.filter(f => AC[f.aircraft]).forEach(f =>
+    addFlight({ ...f, base: f.base === "carrier" && t.has_carrier ? "carrier" : "airfield" }));
+  refreshEscorts();
+  refresh();
+}
 
 function onTheater(e) {
   if (e) clearRoutes();  // only on a real user change, not when restoring
@@ -46,9 +64,14 @@ function onTheater(e) {
 function onMissionType(e) {
   if (e) clearRoutes();
   const mt = radio("mission_type");
-  $("enemy_air_box").classList.toggle("hidden", mt === "cap" || mt === "free");
-  $("secondaries_box").classList.toggle("hidden", mt === "cap" || mt === "free");
-  $("chain_box").classList.toggle("hidden", mt === "cap" || mt === "free");
+  $("enemy_air_box").classList.toggle("hidden", mt === "cap" || mt === "range");
+  $("secondaries_box").classList.toggle("hidden", mt === "cap" || mt === "range");
+  $("chain_box").classList.toggle("hidden", mt === "cap" || mt === "range");
+  $("use_roster").classList.toggle("hidden", mt !== "range");
+  document.querySelectorAll(".role-box").forEach(el => el.classList.toggle("hidden", mt !== "range"));
+  // Switching to Training Range with just one flight: start from the Default Roster.
+  if (e && mt === "range" && flights().length <= 1) useRoster();
+  if (mt !== "range") while (flights().length > maxFlights()) flights().at(-1).remove();
   $("front_line_box").classList.toggle("hidden", mt !== "cas");
   flights().forEach(loadLoadouts);
   refresh();
@@ -74,7 +97,7 @@ function nextFreeNumber(callsign, self) {
 }
 
 function addFlight(f = {}) {
-  if (flights().length >= 8) return;
+  if (flights().length >= maxFlights()) return;
   const div = document.createElement("div");
   div.className = "flight";
   div.innerHTML = `
@@ -93,6 +116,9 @@ function addFlight(f = {}) {
       <div><label>Start</label><select class="start">
         <option value="cold">Cold &amp; dark</option><option value="hot">Hot on ramp</option>
         <option value="runway">On runway</option><option value="air">In the air</option></select></div>
+      <div class="role-box${isRange() ? "" : " hidden"}" title="What this flight practises on the Training Range: sets its loadout and the Range Area its route goes to">
+        <label>Flight Role</label><select class="role"><option value="">Free practice</option>
+        ${OPT.flight_roles.map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></div>
       <div class="lo"><label>Loadout</label><select class="loadout"></select></div>
     </div>
     <p class="weapons"></p>
@@ -108,6 +134,7 @@ function addFlight(f = {}) {
   q(".start").value = f.start || "cold";
   q(".squadron").value = f.squadron || "";
   q(".dtc-on").checked = f.dtc !== false;
+  q(".role").value = f.role || "";
   div.dataset.loadout = f.loadout || "";
   div.dataset.livery = f.livery || "";
   $("flights").appendChild(div);
@@ -119,6 +146,7 @@ function addFlight(f = {}) {
     setCallsigns(div); refreshFlight(div); loadLoadouts(div); loadLiveries(div); refresh(); };
   q(".callsign").onchange = () => { q(".number").value = nextFreeNumber(q(".callsign").value, div); refreshEscorts(); refresh(); };
   for (const s of [".number", ".base", ".start", ".dtc-on", ".ai_wingmen"]) q(s).onchange = refresh;
+  q(".role").onchange = () => { div.dataset.loadout = ""; div.dataset.route = ""; loadLoadouts(div); refresh(); };
   div.dataset.ai = f.ai_wingmen || 0;
   q(".slots").oninput = () => { refreshFlight(div); refresh(); };
   q(".squadron").oninput = refresh;
@@ -168,11 +196,11 @@ function refreshFlight(div) {
 
 const loadoutCache = {};
 async function loadLoadouts(div) {
-  const ac = div.querySelector(".aircraft").value, mt = radio("mission_type");
+  const ac = div.querySelector(".aircraft").value, mt = flightTasking(div);
   const key = `${ac}|${mt}`;
   loadoutCache[key] = loadoutCache[key] || fetch(`/api/loadouts?aircraft=${encodeURIComponent(ac)}&mission=${mt}`).then(r => r.json());
   const list = await loadoutCache[key];
-  if (div.querySelector(".aircraft").value !== ac || radio("mission_type") !== mt) return;
+  if (div.querySelector(".aircraft").value !== ac || flightTasking(div) !== mt) return;
   div._loadouts = list;
   const sel = div.querySelector(".loadout");
   sel.innerHTML = list.map(p => `<option value="${esc(p.id)}">${esc(p.label)}${p.recommended ? " (recommended)" : ""}</option>`).join("");
@@ -222,7 +250,9 @@ function collect() {
       start: d.querySelector(".start").value, loadout: d.dataset.loadout || "", livery: d.dataset.livery || "",
       dtc: d.querySelector(".dtc-on").checked, ai_wingmen: +d.querySelector(".ai_wingmen").value,
       route: d.dataset.route ? JSON.parse(d.dataset.route) : {},
+      role: isRange() ? d.querySelector(".role").value : "",
     })),
+    range_areas: isRange() ? RANGE_AREAS : {},
     secondaries: +$("secondaries").value, chain: $("chain").checked, popups: $("popups").checked,
     dynamic_air: $("dynamic_air").checked, front_line: $("front_line").checked,
     tot: $("tot").value.trim(),
@@ -302,7 +332,7 @@ function addAIFlight(f = {}) {
 
 // ----------------------------------------------------------------------- map
 let map = null, layer = null;
-const MARK = { home: "#2f80ed", enemy: "#e5675c", target: "#e0a526", bulls: "#8e44ad", carrier: "#27ae60" };
+const MARK = { home: "#2f80ed", enemy: "#e5675c", target: "#e0a526", bulls: "#8e44ad", carrier: "#27ae60", range: "#ff9f1a" };
 function drawMap(p) {
   if (!window.L || !p.points) return;
   $("map").classList.remove("hidden");
@@ -315,6 +345,7 @@ function drawMap(p) {
   }
   layer.clearLayers();
   drawRoute(p);
+  drawRangeAreas(p);
   const byKind = {};
   for (const pt of p.points) {
     byKind[pt.kind] = pt.pos;
@@ -351,6 +382,21 @@ function drawRoute(p) {
       refresh();
     });
   }
+}
+
+function drawRangeAreas(p) {
+  for (const a of p.range_areas || []) {
+    L.circle(a.pos, { radius: a.radius, color: MARK.range, weight: 2, fillOpacity: 0.08 }).addTo(layer);
+    const m = L.marker(a.pos, { draggable: true, icon: L.divIcon({ className: "range-handle", html: esc(a.label) }) })
+      .bindTooltip(`${a.label} Range Area: ${a.purpose} (drag to move)`).addTo(layer);
+    m.on("dragend", () => {
+      const ll = m.getLatLng();
+      RANGE_AREAS[a.id] = [+ll.lat.toFixed(5), +ll.lng.toFixed(5)];
+      flights().forEach(d => d.dataset.route = "");
+      refresh();
+    });
+  }
+  $("range_note").classList.toggle("hidden", !(p.range_areas || []).length);
 }
 
 function renderScripts() {
@@ -393,7 +439,8 @@ async function updateSummary() {
     ["Era", p.era_label], ["You", `${p.player_side} · ${seats} player${seats === 1 ? "" : "s"}${aiWing ? ` + ${aiWing} AI` : ""}`],
     ["Enemy", p.enemy_side],
   ];
-  if (mt === "cap" || (mt !== "free" && body.enemy_air !== "none")) rows.push(["Fighters", p.fighters]);
+  if (mt === "cap" || (mt !== "range" && body.enemy_air !== "none")) rows.push(["Fighters", p.fighters]);
+  if (mt === "range") rows.push(["Range Areas", (p.range_areas || []).map(a => a.label).join(", ")]);
   if (mt === "cas") rows.push(["Armor", p.tanks]);
   if (mt === "sead" || mt === "strike") rows.push(["Air defense", p.sam]);
   if (mt === "antiship") rows.push(["Ships", p.ships.join(", ")]);
@@ -431,7 +478,9 @@ function restore(s) {
   if (!s) return addFlight();
   if (OPT.theaters.some(t => t.key === s.theater && t.allowed)) { $("theater").value = s.theater; onTheater(); }
   $("blue_base").value = s.blue_base; $("red_base").value = s.red_base;
-  ["mission_type", "difficulty", "enemy_air", "season", "wind"].forEach(k => setRadio(k, s[k]));
+  // Free Flight became Training Range (docs/adr/0002).
+  ["mission_type", "difficulty", "enemy_air", "season", "wind"].forEach(k => setRadio(k, k === "mission_type" && s[k] === "free" ? "range" : s[k]));
+  RANGE_AREAS = s.range_areas || {};
   $("time_of_day").value = s.time_of_day; $("weather").value = s.weather; $("era").value = s.era || "auto";
   $("awacs").checked = s.awacs; $("tankers").checked = s.tankers;
   $("singleplayer").checked = s.singleplayer; $("title").value = s.title || "";
@@ -484,7 +533,7 @@ function surprise() {
   const t = pick(OPT.theaters.filter(m => m.allowed));
   $("theater").value = t.key; onTheater();
   $("blue_base").value = pick(t.blue_bases); $("red_base").value = pick(t.red_bases);
-  const types = OPT.mission_types.map(m => m[0]).filter(k => k !== "free" && (k !== "antiship" || t.has_sea));
+  const types = OPT.mission_types.map(m => m[0]).filter(k => k !== "range" && (k !== "antiship" || t.has_sea));
   setRadio("mission_type", pick(types));
   setRadio("difficulty", pick(["easy", "medium", "hard"]));
   setRadio("enemy_air", pick(["none", "light", "heavy"]));
@@ -701,6 +750,7 @@ async function showUpdate() {
   loadSetupList();
   $("title").addEventListener("input", refresh);
   $("add_flight").onclick = () => { addFlight(); refresh(); };
+  $("use_roster").onclick = useRoster;
   $("generate").onclick = onGenerate;
   onTheater();
   let saved = null;

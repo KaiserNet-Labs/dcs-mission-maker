@@ -7,7 +7,7 @@ popular modules, plus a generic pylon filler for everything else.
 import functools
 
 ROLE_FOR_MISSION = {"cap": "aa", "cas": "cas", "sead": "sead",
-                    "strike": "strike", "antiship": "antiship", "csar": "cas", "free": "aa"}
+                    "strike": "strike", "antiship": "antiship", "csar": "cas", "range": "aa"}
 ROLE_FALLBACK = {"cas": ["strike"], "sead": ["cas", "strike"],
                  "strike": ["cas"], "antiship": ["cas", "strike"], "aa": []}
 
