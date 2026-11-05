@@ -41,6 +41,10 @@ class Theater:
     default_blue: str = field(default="")
     default_red: str = field(default="")
     beacons: str = ""        # beacon database file (navdata), "" = none
+    # Training Range: hand-picked Range Areas (area id -> Offset known to be on land) and the
+    # friendly field helicopters use. Areas not listed are placed automatically.
+    range_areas: dict = field(default_factory=dict)
+    range_heli_base: str = ""
 
     def __post_init__(self):
         self.default_blue = self.default_blue or self.blue_bases[0]
@@ -68,6 +72,14 @@ THEATERS: dict[str, Theater] = {t.key: t for t in [
         red_sea=Offset("Gudauta", 225, 35),
         blue_carrier=Offset("Batumi", 270, 70),
         summer_temp=24, winter_temp=2,
+        # Kodori foothills NE of Sukhumi; the Gali/Enguri plain; the hills north of Kutaisi;
+        # helicopters at Kutaisi with their area on the plain to its west.
+        range_areas={"sead": Offset("Sukhumi-Babushara", 40, 25),
+                     "flak": Offset("Sukhumi-Babushara", 40, 25),
+                     "cas": Offset("Senaki-Kolkhi", 320, 50),
+                     "strike": Offset("Kutaisi", 330, 55),
+                     "heli": Offset("Kutaisi", 300, 20)},
+        range_heli_base="Kutaisi",
     ),
     Theater(
         key="persiangulf", label="Persian Gulf", terrain_cls=terrain.PersianGulf,
@@ -110,6 +122,14 @@ THEATERS: dict[str, Theater] = {t.key: t for t in [
         red_sea=Offset("Saipan Intl", 270, 30),
         blue_carrier=Offset("Andersen AFB", 270, 50),
         summer_temp=30, winter_temp=27,
+        # One island each: central Saipan, North Field on Tinian, the Sabana plateau on Rota;
+        # helicopters at Won Pat with their area in the hills of southern Guam.
+        range_areas={"sead": Offset("Saipan Intl", 10, 8),
+                     "flak": Offset("Saipan Intl", 10, 8),
+                     "strike": Offset("Tinian Intl", 15, 8),
+                     "cas": Offset("Rota Intl", 250, 6),
+                     "heli": Offset("Antonio B. Won Pat Intl", 210, 20)},
+        range_heli_base="Antonio B. Won Pat Intl",
     ),
     Theater(
         key="sinai", label="Sinai", terrain_cls=terrain.Sinai, beacons="sinai",

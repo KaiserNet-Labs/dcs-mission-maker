@@ -74,6 +74,10 @@ def place_areas(theater: Theater, terrain, home_name: str, red_base_name: str, e
     red_ap = terrain.airports[red_base_name].position
     primary, derived = _candidates(theater, terrain, red_base_name)
     areas = rc.areas_for(era, bool(theater.red_sea))
+    # Hand-picked spots first (Theater.range_areas); the user's drags still win.
+    curated = {k: resolve_offset(terrain, off) for k, off in theater.range_areas.items()}
+    dragged = set(overrides)
+    overrides = {**curated, **overrides}
     taken, placed = [], {}
 
     def far_enough(p):
@@ -84,7 +88,10 @@ def place_areas(theater: Theater, terrain, home_name: str, red_base_name: str, e
         taken.append(pos)
 
     heli_base = home_name
-    if any(a.placement == "heli" for a in areas):
+    if theater.range_heli_base and "heli" in curated:
+        heli_base = theater.range_heli_base
+        take("heli", overrides["heli"])
+    elif any(a.placement == "heli" for a in areas):
         bases = [(b, terrain.airports[b].position) for b in theater.blue_bases]
         _name, pos, heli_base = min(
             ((rb, c, b) for rb, c in primary for b, bp in bases),
@@ -119,7 +126,7 @@ def place_areas(theater: Theater, terrain, home_name: str, red_base_name: str, e
             # The side further from the ground areas, so leashed fighters stay off the attack runs.
             side = max((left, right), key=lambda p: min(p.distance_to_point(g) for g in ground))
             take(area.id, side)
-    return RangeLayout([PlacedArea(a, placed[a.id], a.id in overrides) for a in areas], heli_base)
+    return RangeLayout([PlacedArea(a, placed[a.id], a.id in dragged) for a in areas], heli_base)
 
 
 # A Flight Role flies the standard route of the matching mission type to its Range Area.

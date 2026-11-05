@@ -52,8 +52,24 @@ for key, t in THEATERS.items():
                 if d < MIN_SEPARATION_M:
                     print(f"note: {key} {era}: {a.area.id} and {b.area.id} only {d / 1000:.0f} km apart")
 
+# 2b. Hand-picked maps (the ones the group flies most): areas well apart, helicopters close.
+for key in ("caucasus", "marianas"):
+    t = THEATERS[key]
+    terrain = t.terrain_cls()
+    for home in t.blue_bases:
+        layout = place_areas(t, terrain, home, t.default_red, "modern")
+        check(layout.heli_base == t.range_heli_base, f"{key}: hand-picked helicopter base")
+        heli = layout.get("heli").pos.distance_to_point(terrain.airports[layout.heli_base].position)
+        check(heli / 1852 <= 15, f"{key}: Helicopter area {heli / 1852:.0f} nm from its base")
+        ground = [p for p in layout.areas if p.area.placement in ("ground", "heli")]
+        for i, a in enumerate(ground):
+            for b in ground[i + 1:]:
+                check(a.pos.distance_to_point(b.pos) >= MIN_SEPARATION_M,
+                      f"{key}: {a.area.id} and {b.area.id} apart")
+        check(not any(p.moved for p in layout.areas), f"{key}: hand-picked areas aren't 'moved'")
+
 # 3. The full Default Roster builds, and every template the config names is in the mission.
-for key in ("caucasus", "persiangulf", "syria", "nevada", "germany"):
+for key in ("caucasus", "marianas", "persiangulf", "syria", "nevada", "germany"):
     t = THEATERS[key]
     req = {"theater": key, "mission_type": "range",
            "flights": rc.default_roster(t.blue_carrier is not None)}
