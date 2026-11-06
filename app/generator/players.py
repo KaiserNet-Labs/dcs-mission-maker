@@ -90,7 +90,7 @@ class PlayersMixin:
                 "squadron": f.squadron, "seats": f.slots, "ai": f.ai_wingmen, "base": base,
                 "pilots": pilots, "timing": getattr(f, "timing", None),
                 "start": f.start, "loadout": f"{loadout}: {kit}", "tasking": tasking,
-                "range_area": self.flight_area_label(f),
+                "range_area": self.flight_area_label(f), "range_area_id": self.flight_area_id(f),
                 "route": route, "origin": origin, "carrier": carrier,
                 "radios": radio_table(applied)})
             self.player_warnings(f, a, flight_name, nm, heli, weapons)
@@ -111,12 +111,19 @@ class PlayersMixin:
         area, shape = flight_route(self.range_layout, f.role, AIRCRAFT[f.aircraft]["helicopter"])
         return (area.pos if area else self.target), shape
 
-    def flight_area_label(self, f):
-        """The Range Area this flight's route goes to (Training Range only)."""
+    def flight_area(self, f):
+        """The Range Area this flight's route goes to (Training Range only), or None."""
         if self.req.mission_type != "range":
             return None
-        area, _shape = flight_route(self.range_layout, f.role, AIRCRAFT[f.aircraft]["helicopter"])
+        return flight_route(self.range_layout, f.role, AIRCRAFT[f.aircraft]["helicopter"])[0]
+
+    def flight_area_label(self, f):
+        area = self.flight_area(f)
         return area.area.label if area else None
+
+    def flight_area_id(self, f):
+        area = self.flight_area(f)
+        return area.area.id if area else None
 
     def flight_home(self, f):
         """The airfield a flight starts from and lands at: in a Training Range, helicopters

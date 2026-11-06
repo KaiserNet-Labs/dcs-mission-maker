@@ -37,6 +37,12 @@ local function runOne(path)
   env.staticAlive = function(name) return statics[name] ~= nil end
   env.destroyStatic = function(name) statics[name] = nil end
   env.setFlag = function() end
+  env.groupInAir = function() return true end
+  env.respawnGroup = function(tpl, alias) groups[alias] = 1 return alias end
+  for _, s in ipairs(DMM_RANGE.support or {}) do
+    assert(type(s.group) == "string" and type(s.label) == "string", path .. ": bad support entry")
+    groups[s.group] = 1
+  end
   env.setAlarm = function() end
   env.taskAir = function(_, center, radius, alt, speed)
     assert(center.x and radius > 0 and alt and speed, path .. ": bad air task")

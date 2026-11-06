@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from .. import eras, integrations, kneeboard, navdata, threatdb
+from .. import range_catalog as rc
 from .common import JTAC_FREQ, bearing_nm, bra, fmt_latlon, latlng_pair
 from .range import TEMPLATE_PREFIX
 from .request import MISSION_TYPES, TIMES
@@ -56,6 +57,47 @@ class BriefingMixin:
                 path = os.path.join(self.workdir, f"kneeboard_{i + 1}{suffix}.png")
                 render(card if suffix == "" else self.nav_log(card), mission, path)
                 self.m.add_aircraft_kneeboard(card["type"], Path(path))
+        if r.mission_type == "range":
+            self.add_range_kneeboards(mission)
+
+    def range_guide(self, mission):
+        """Cheat-sheet data: the F-keys match the menu training_range.lua builds."""
+        def fkey(n):
+            return f"F{n}"
+
+        areas = []
+        for i, a in enumerate(self.range_brief(), start=1):
+            menu = rc.menu_for(next(p.area for p in self.range_layout.areas if p.area.id == a["id"]),
+                               self.era, self.enemy_side)
+            default = rc.ERA_DEFAULTS[(self.era, self.enemy_side)]
+            roles = [{"fkey": fkey(n), "label": role.label, "repeatable": role.repeatable,
+                      "systems": [(fkey(k), rc.SYSTEMS[sid].label
+                                   + (" (era default)" if default.get(role.id) == sid else ""))
+                                  for k, sid in enumerate(ids, start=1)]}
+                     for n, (role, ids) in enumerate(menu, start=1)]
+            jtac = self.range_jtacs.get(a["id"])
+            areas.append({"fkey": fkey(i), "label": a["label"], "purpose": a["purpose"],
+                          "latlon": fmt_latlon(a["pos"]), "bulls": self.bulls(a["pos"]),
+                          "radius_km": a["radius"] / 1000, "roles": roles,
+                          "difficulty_key": fkey(len(roles) + 1), "clear_key": fkey(len(roles) + 2),
+                          "practice": a["practice"], "jtac": jtac["text"] if jtac else None})
+        return {"title": mission["title"], "night": mission["night"], "areas": areas,
+                "support": mission["support"], "caps": rc.CAPS,
+                "difficulty": self.area_difficulty.capitalize()}
+
+    def add_range_kneeboards(self, mission):
+        """The Range Guide pages, after each aircraft type's own flight pages."""
+        guide = self.range_guide(mission)
+        files = [os.path.join(self.workdir, "kneeboard_range_0.png")]
+        kneeboard.range_index_page(guide, files[0])
+        self.range_kneeboards = [{"page": "range_0", "label": "Guide"}]
+        for i, area in enumerate(guide["areas"], start=1):
+            files.append(os.path.join(self.workdir, f"kneeboard_range_{i}.png"))
+            kneeboard.range_area_page(area, guide, files[-1])
+            self.range_kneeboards.append({"page": f"range_{i}", "label": area["label"]})
+        for utype in dict.fromkeys(c["type"] for c in self.cards):
+            for f in files:
+                self.m.add_aircraft_kneeboard(utype, Path(f))
 
     # ----------------------------------------------------------------- route page
     def nav_log(self, card):
@@ -109,8 +151,11 @@ class BriefingMixin:
         heli = card["type"].helicopter
         if self.req.mission_type == "range" and key == "target" and card.get("range_area"):
             area = card["range_area"]
+            jtac = self.range_jtacs.get(card.get("range_area_id"))
             return (f"{area} Range Area: spawn what you want to practise against from F10 > Other > "
-                    f"Training Range > {area}. Practice Targets sit at the centre and don't shoot back.")
+                    f"Training Range > {area}. Practice Targets sit at the centre and don't shoot back."
+                    + (f" JTAC {jtac['name']} on {jtac['freq']}.000 AM, laser {jtac['laser']}."
+                       if jtac else ""))
         tgt_what = {
             "cas": "Target area: friendly troops in contact. "
                    + (f"Check in with JTAC Axeman on {JTAC_FREQ}.000 AM for targets and the laser code."
@@ -221,6 +266,7 @@ class BriefingMixin:
                      if self.jtac_pos else None),
             "flights": flights, "ai_flights": self.ai_cards,
             "oob": self.order_of_battle(),
+            "range_kneeboards": getattr(self, "range_kneeboards", []),
             "range": ([{**a, "pos": latlng_pair(a["pos"]), "text": fmt_latlon(a["pos"]),
                         "bulls": self.bulls(a["pos"])} for a in self.range_brief()]
                       if r.mission_type == "range" else None),

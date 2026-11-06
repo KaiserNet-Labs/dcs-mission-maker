@@ -126,6 +126,8 @@ def _labels(brief):
     for i, f in enumerate(brief["flights"], start=1):
         for k in f.get("kneeboards") or [{"page": str(i), "label": "Flight"}]:
             out[f"kneeboard_{k['page']}.png"] = f"{f['name']} · {k['label']}"
+    for k in brief.get("range_kneeboards") or []:
+        out[f"kneeboard_{k['page']}.png"] = f"Range Guide · {k['label']}"
     return out
 
 

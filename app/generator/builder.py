@@ -97,6 +97,8 @@ class Builder(EnemyMixin, FriendlyMixin, PlayersMixin, RangeMixin, ScriptingMixi
         self.cap_flag = None
         self.heli_home = self.home
         self.flight_bases = {}      # (callsign, number) -> airfield, when parking ran out
+        self.support_groups = []    # AWACS/tankers the Training Range script replaces
+        self.range_jtacs = {}       # Training Range: area id -> JTAC
         objectives.reset_flags()
         if req.mission_type == "range":
             self.setup_range_layout()
@@ -127,8 +129,11 @@ class Builder(EnemyMixin, FriendlyMixin, PlayersMixin, RangeMixin, ScriptingMixi
         self.add_ewr()
         self.add_enemy_air()
         self.add_support()
+        range_jtac = self.range_jtac_freq("cas") if self.req.mission_type == "range" else None
         self.comm_plan = CommPlan(self.home, self.has_awacs, self.has_boom, self.has_drogue,
-                                  jtac_freq=JTAC_FREQ if self.wants_jtac() else None)
+                                  jtac_freq=(range_jtac if self.req.mission_type == "range"
+                                             else JTAC_FREQ if self.wants_jtac() else None),
+                                  jtac2_freq=self.range_jtac_freq("heli"))
         self.add_jtac()
         self.add_players()
         self.add_ai_flights()

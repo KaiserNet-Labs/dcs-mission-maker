@@ -256,6 +256,61 @@ def route_page(log, mission, path):
     p.save(path)
 
 
+DIFFICULTY_HELP = ("Easy: average skill, radars always on. Normal: good skill. "
+                   "Hard: excellent skill. Applies to what you spawn next.")
+
+
+def range_index_page(guide, path):
+    """Training Range cheat sheet, page 1: how to open the menu and where every area is."""
+    p = Page(NIGHT if guide.get("night") else DAY)
+    p.title("Training Range guide", guide["title"])
+    p.heading("Open the menu")
+    p.line("Press \\ (or your radio transmit button when Easy Comms is off), then F10 Other "
+           "> Training Range. F11 goes back a level, F12 closes the menu. A message confirms "
+           "every spawn.")
+    p.heading("Range Areas (orange circles on the F10 map)")
+    p.table(["KEY", "AREA", "POSITION", "BULLS"],
+            [(a["fkey"], a["label"][:16], a["latlon"], a["bulls"]) for a in guide["areas"]],
+            [60, 200, 300, 110])
+    p.heading("Support and JTACs")
+    for line in guide["support"] or ["None."]:
+        p.line(line)
+    p.heading("Good to know")
+    p.line(f"Every area starts at {guide['difficulty']}. {DIFFICULTY_HELP}")
+    p.line("Practice Targets don't shoot back and come back about 5 minutes after they're "
+           "destroyed. Clear restores them at once.")
+    p.line(f"Limits: {guide['caps']['area']} spawns per area, {guide['caps']['aircraft']} enemy "
+           f"aircraft and {guide['caps']['total']} spawns across the range.")
+    p.line("Enemy aircraft stay inside their area. AWACS and tankers are replaced when they "
+           "land or are lost.")
+    p.save(path)
+
+
+def range_area_page(area, guide, path):
+    """Training Range cheat sheet: one Range Area's menu, key by key."""
+    p = Page(NIGHT if guide.get("night") else DAY)
+    p.title(f"Range: {area['label']}", f"\\ > F10 Other > Training Range > {area['fkey']} {area['label']}")
+    p.heading("Where")
+    p.line(f"{area['latlon']}  ·  bulls {area['bulls']}  ·  {area['radius_km']:.0f} km radius")
+    p.line(area["purpose"])
+    p.heading("Spawn")
+    for role in area["roles"]:
+        systems = "  ·  ".join(f"{k} {label}" for k, label in role["systems"])
+        then = "  Then F1 Once or F2 Repeat until cleared." if role["repeatable"] else ""
+        p.numbered(role["fkey"], role["label"], systems + "." + then)
+    p.heading("Area controls")
+    p.numbered(area["difficulty_key"], "Difficulty", "Cycles Easy, Normal, Hard. " + DIFFICULTY_HELP)
+    p.numbered(area["clear_key"], "Clear", "Removes everything spawned here and stops repeats"
+               + (", and puts the Practice Targets back." if area["practice"] else "."))
+    if area["practice"]:
+        p.heading("Practice Targets (don't shoot back)")
+        p.line(", ".join(area["practice"]) + ", at the centre of the area.")
+    if area.get("jtac"):
+        p.heading("JTAC")
+        p.line(area["jtac"])
+    p.save(path)
+
+
 def text_pages(title, sub, text, palette=DAY, size=14):
     """A plain-text document (e.g. the briefing, or a pilot's notes page) as kneeboard-sized
     pages; ALL-CAPS lines become headings. Returns PIL images, starting a new page whenever

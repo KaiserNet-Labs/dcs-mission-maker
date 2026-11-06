@@ -60,6 +60,7 @@ class FriendlyMixin:
                                     race_distance=40000, heading=threat + 90,
                                     altitude=9000, speed=600, frequency=251)
             apply_support_callsign(g, "awacs", "Overlord")
+            self.support_groups.append({"group": g.name, "label": "AWACS Overlord"})
             self.awacs_unit = g.units[0].name
             self.has_awacs = True
             self.orbits.append({"name": "AWACS", "center": pos, "course": threat + 90,
@@ -80,6 +81,7 @@ class FriendlyMixin:
                                          altitude=alt, speed=500, frequency=freq,
                                          tacanchannel=tacan)
                 apply_support_callsign(g, "tanker", name)
+                self.support_groups.append({"group": g.name, "label": f"Tanker {name}"})
                 setattr(self, f"has_{kind}", True)
                 any_tanker = True
                 self.orbits.append({"name": name.upper(), "center": pos, "course": threat + 90,
@@ -91,40 +93,74 @@ class FriendlyMixin:
                 self.brief.situation.append(f"No tankers in the {eras.ERA_LABELS[self.era]} era.")
 
     # ------------------------------------------------------------- friendly AI
+    # Training Range JTACs: (Range Area, name, DCS FAC callsign index, MHz AM). pydcs can't
+    # set a FAC's laser code, so both lase on the DCS default, 1688.
+    RANGE_JTACS = [("cas", "Axeman", 1, JTAC_FREQ), ("heli", "Darknight", 2, JTAC_FREQ + 1)]
+
     def wants_jtac(self):
-        return (self.req.jtac and self.req.mission_type in ("cas", "strike", "sead")
-                and ERAS_WITH_JTAC.get(self.era, False))
+        if not (self.req.jtac and ERAS_WITH_JTAC.get(self.era, False)):
+            return False
+        return self.req.mission_type in ("cas", "strike", "sead", "range")
+
+    def range_jtac_freq(self, area_id):
+        """MHz of the JTAC working a Range Area, or None."""
+        if self.req.mission_type != "range" or not self.wants_jtac():
+            return None
+        for aid, _name, _cs, freq in self.RANGE_JTACS:
+            placed = self.range_layout.get(aid)
+            if aid == area_id and placed and placed.area.jtac:
+                return freq
+        return None
 
     def add_jtac(self):
-        """An invisible, immortal JTAC that lases the objective (code 1688)."""
+        """Invisible, immortal JTACs that lase what they see (code 1688): one at the target,
+        or one per Training Range area that has a JTAC."""
         if not self.wants_jtac():
             return
-        fac = task.FAC(callsign=1, designation=task.Designation.Auto, frequency=JTAC_FREQ,
+        if self.req.mission_type != "range":
+            self.jtac_line, self.jtac_pos = self.place_jtac(
+                self.target, "Axeman", 1, JTAC_FREQ, "target")
+            self.brief.comms.append(self.jtac_line)
+            return
+        home = self.home.position
+        for aid, name, callsign, freq in self.RANGE_JTACS:
+            placed = self.range_layout.get(aid)
+            if not placed or not placed.area.jtac:
+                continue
+            line, pos = self.place_jtac(placed.pos, name, callsign, freq,
+                                        f"{placed.area.label} area", toward=home)
+            self.range_jtacs[aid] = {"name": name, "freq": freq, "laser": JTAC_LASER, "text": line}
+            self.brief.comms.append(line)
+            if self.jtac_line is None:
+                self.jtac_line, self.jtac_pos = line, pos
+
+    def place_jtac(self, center, name, callsign, freq, where, toward=None):
+        """One JTAC working `center`. Returns (briefing line, position)."""
+        back = center.heading_between_point(toward or self.home.position)
+        fac = task.FAC(callsign=callsign, designation=task.Designation.Auto, frequency=freq,
                        modulation=task.Modulation.AM)
+        group_name = f"JTAC {name}"
         if self.era == "modern":
-            orbit = self.target.point_from_heading(self.heading_to_home(), 6000)
-            g = self.m.flight_group_inflight(self.blue, "JTAC Axeman", self.ai_type("MQ-9 Reaper"),
+            orbit = center.point_from_heading(back, 6000)
+            g = self.m.flight_group_inflight(self.blue, group_name, self.ai_type("MQ-9 Reaper"),
                                              orbit, 4500, 250, maintask=task.AFAC, group_size=1)
             # Its aircraft callsign must not clash with a player flight's.
             apply_callsign(g, *self.next_ai_callsign(g.units[0].unit_type))
-            g.units[0].name = "JTAC Axeman"
+            g.units[0].name = group_name
             g.points[0].tasks += [task.SetInvisibleCommand(True), task.SetImmortalCommand(True),
                                   fac]
-            wp = g.add_waypoint(self.target, 4500, 250)
+            wp = g.add_waypoint(center, 4500, 250)
             wp.tasks.append(task.OrbitAction(4500, 250, task.OrbitAction.OrbitPattern.Circle))
-            what = "MQ-9 Reaper orbiting the target"
-            self.jtac_pos = orbit
+            what, pos = f"MQ-9 Reaper orbiting the {where}", orbit
         else:
-            pos = self.target.point_from_heading(self.heading_to_home(), 3000)
-            g = self.ground_group("JTAC Axeman", [(vehicles.Unarmed.Hummer, 0, 0)], pos,
+            pos = center.point_from_heading(back, 3000)
+            g = self.ground_group(group_name, [(vehicles.Unarmed.Hummer, 0, 0)], pos,
                                   country=self.blue)
             g.points[0].tasks += [task.SetInvisibleCommand(True), task.SetImmortalCommand(True),
                                   fac]
-            what = "ground team 3 km short of the target"
-            self.jtac_pos = pos
-        self.jtac_line = (f"JTAC Axeman ({what}): {JTAC_FREQ}.000 MHz AM, laser code "
-                          f"{JTAC_LASER}. Check in on the radio and ask for a target.")
-        self.brief.comms.append(self.jtac_line)
+            what = f"ground team 3 km short of the {where}"
+        return (f"JTAC {name} ({what}): {freq}.000 MHz AM, laser code {JTAC_LASER}. "
+                "Check in on the radio and ask for a target."), pos
 
     @staticmethod
     def ai_type(type_id):

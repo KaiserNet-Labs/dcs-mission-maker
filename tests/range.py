@@ -89,6 +89,15 @@ for key in ("caucasus", "marianas", "persiangulf", "syria", "nevada", "germany")
     possible = [e for e in out["brief"]["oob"] if e["possible"]]
     check(len(possible) >= 10, f"{key}: Threat ID lists possible spawns ({len(possible)})")
     check(" - SEAD" in mission and " - Air-to-Air" in mission, f"{key}: Flight Role in slot names")
+    z = zipfile.ZipFile(io.BytesIO(out["data"]))
+    types = {n.split("/")[1] for n in z.namelist() if n.startswith("KNEEBOARD/")}
+    for t_id in types:
+        guide = [n for n in z.namelist() if f"KNEEBOARD/{t_id}/" in n and "kneeboard_range_" in n]
+        check(len(guide) == len(out["brief"]["range"]) + 1, f"{key}: {t_id} has the Range Guide pages")
+    check([k["label"] for k in out["brief"]["range_kneeboards"]][0] == "Guide", f"{key}: guide labels")
+    check(any("JTAC Darknight" in s for s in out["brief"]["support"]), f"{key}: Helicopter-area JTAC")
+    check(any(c["name"] == "JTAC2" and c["mhz"] == 267 for f in flights for r in f["radios"]
+              for c in r["channels"]), f"{key}: JTAC2 on the radio presets")
 
 # 4. A SEAD flight's target waypoint is the SEAD/DEAD area; a helicopter goes to Helicopter.
 out, mission, config = build({"theater": "caucasus", "mission_type": "range", "flights": [

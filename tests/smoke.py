@@ -47,7 +47,7 @@ def run(job):
         assert "mission" in names, names
         theatre = z.read("theatre").decode()
         assert f'["theatre"]="{theatre}"' in z.read("mission").decode(), ("theatre file matches the mission", theatre)
-        pages = [n for n in names if n.startswith("KNEEBOARD/")]
+        pages = [n for n in names if n.startswith("KNEEBOARD/") and "kneeboard_range_" not in n]
         routes = [n for n in pages if n.endswith("_route.png")]
         assert routes and len(routes) * 2 == len(pages), ("every flight gets a route page", pages)
         dtcs = [n for n in names if n.startswith("DTC/")]

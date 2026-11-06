@@ -116,6 +116,19 @@ end
 
 function env.random() return math.random() end
 
+-- Support aircraft: is the group's lead flying?
+function env.groupInAir(name)
+  local g = Group.getByName(name)
+  local u = g and g:isExist() and g:getUnit(1)
+  return u ~= nil and u ~= false and u:inAir()
+end
+
+-- A fresh copy of a group from its mission template, where the template starts.
+function env.respawnGroup(template, alias)
+  local g = SPAWN:NewWithAlias(template, alias):Spawn()
+  return g and g:GetName() or nil
+end
+
 -- ---------------------------------------------------------------- state
 TR.areas = {}          -- id -> { cfg, difficulty, spawns = {}, epoch, practice = {} }
 TR.order = {}          -- area ids in menu order
@@ -288,8 +301,46 @@ local function restorePractice(area, force)
   end
 end
 
+-- ---------------------------------------------------------------- support aircraft
+-- AWACS and tankers are replaced when they land (bingo) or are lost, so a long session keeps
+-- them. A replacement starts where the original did, on its orbit.
+local LANDED_GRACE = 30
+
+local function checkSupport()
+  local now = env.now()
+  for _, s in ipairs(TR.support) do
+    if s.pendingAt then
+      if now >= s.pendingAt then
+        TR.counter = TR.counter + 1
+        local name = env.respawnGroup(s.template, string.format("%s #%d", s.template, TR.counter))
+        s.pendingAt = nil
+        if name then
+          s.current, s.airborne, s.groundSince = name, false, nil
+          msg(s.label .. " is back on station.", 10)
+        end
+      end
+    else
+      local alive = env.groupAlive(s.current) > 0
+      local flying = alive and env.groupInAir(s.current)
+      if flying then
+        s.airborne, s.groundSince = true, nil
+      elseif alive and s.airborne then
+        s.groundSince = s.groundSince or now
+      end
+      local landed = s.groundSince and now - s.groundSince >= LANDED_GRACE
+      if not alive or landed then
+        if alive then env.destroyGroup(s.current) end
+        s.pendingAt = now + C.support_respawn
+        msg(string.format("%s is off station. A replacement checks in in about %d min.", s.label,
+          math.max(1, math.floor(C.support_respawn / 60))), 10)
+      end
+    end
+  end
+end
+
 -- ---------------------------------------------------------------- periodic check
 function TR.check()
+  checkSupport()
   for _, id in ipairs(TR.order) do
     local area = TR.areas[id]
     for n, spawn in pairs(area.spawns) do
@@ -398,6 +449,11 @@ end
 function TR.start()
   C = DMM_RANGE
   TR.areas, TR.order, TR.counter, TR.root = {}, {}, 0, nil
+  TR.support = {}
+  for _, s in ipairs(C.support or {}) do
+    TR.support[#TR.support + 1] = { template = s.group, label = s.label, current = s.group,
+                                    airborne = false }
+  end
   for _, cfg in ipairs(C.areas) do
     TR.areas[cfg.id] = { cfg = cfg, difficulty = C.difficulty, spawns = {}, epoch = 0,
                          deadSince = {}, practiceGroups = {} }

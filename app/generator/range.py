@@ -29,6 +29,7 @@ SLOT_RADIUS_M = {"ground": 1500, "heli": 1500, "sea": 4000}
 MIN_SEPARATION_M = 12000
 IDEAL_NM = 50                      # jet areas: aim for 40-60 nm from home
 FLAGS = {"range": 9032, "hook": 9030, "reload": 9031}
+SUPPORT_RESPAWN_S = 60              # AWACS/tanker replacement after it lands or is lost
 
 
 @dataclass
@@ -330,6 +331,7 @@ class RangeMixin:
             "practice_respawn": rc.PRACTICE_RESPAWN_S, "flags": dict(FLAGS),
             "areas": areas, "systems": systems,
             "range_control": list(getattr(self, "range_control_groups", [])),
+            "support": list(self.support_groups), "support_respawn": SUPPORT_RESPAWN_S,
         }
 
     def range_config_lua(self):

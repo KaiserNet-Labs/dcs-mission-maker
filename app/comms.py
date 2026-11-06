@@ -77,7 +77,7 @@ class CommPlan:
     PACKAGE = {"uhf": 255.0, "vhf": 134.0}
 
     def __init__(self, home_airport, has_awacs, has_boom, has_drogue, carrier_freq=None,
-                 jtac_freq=None):
+                 jtac_freq=None, jtac2_freq=None):
         atc = home_airport.atc_radio
         self.atc = {"uhf": atc.uhf_hz / 1e6 if atc else None,
                     "vhf": atc.vhf_high_hz / 1e6 if atc else None}
@@ -86,6 +86,7 @@ class CommPlan:
         self.drogue = 253.0 if has_drogue else None
         self.carrier = carrier_freq
         self.jtac = jtac_freq
+        self.jtac2 = jtac2_freq      # Training Range: the Helicopter area's JTAC
 
     @staticmethod
     def flight_freq(index, band):
@@ -96,7 +97,7 @@ class CommPlan:
         plan = [(self.flight_freq(index, band), "FLIGHT"), (self.PACKAGE[band], "PKG")]
         if band == "uhf":
             plan += [(self.awacs, "AWACS"), (self.boom, "TEXACO"), (self.drogue, "ARCO"),
-                     (self.carrier, "CVN"), (self.jtac, "JTAC")]
+                     (self.carrier, "CVN"), (self.jtac, "JTAC"), (self.jtac2, "JTAC2")]
         plan.append((self.atc[band], "TOWER"))
         return [(n, f, label) for n, (f, label) in enumerate(
             [p for p in plan if p[0]], start=1)]

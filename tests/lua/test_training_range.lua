@@ -6,6 +6,8 @@ DMM_RANGE = {
   enemy_country = "CJTF_RED", difficulty = "normal",
   caps = { area = 3, aircraft = 4, total = 5 }, repeat_delay = 120, practice_respawn = 300,
   flags = { range = 9032, hook = 9030, reload = 9031 },
+  support = { { group = "Overlord", label = "AWACS Overlord" }, { group = "Texaco", label = "Tanker Texaco" } },
+  support_respawn = 60,
   systems = {
     sa11 = { label = "SA-11", kind = "ground", radar = true, templates = { ["2"] = "TR_TPL sa11" } },
     t72 = { label = "T-72 column", kind = "ground", radar = false, templates = { ["2"] = "TR_TPL t72" } },
@@ -58,6 +60,18 @@ env.destroyStatic = function(name) statics[name] = nil end
 env.setFlag = function(n, v) flags[n] = v end
 env.setAlarm = function(name, state) alarms[name] = state end
 env.taskAir = function(name, center, radius) tasks[name] = { center = center, radius = radius } end
+local inAir = {}
+groups["Overlord"] = { size = 1 }
+groups["Texaco"] = { size = 1 }
+inAir["Overlord"], inAir["Texaco"] = true, true
+env.groupInAir = function(name) return groups[name] ~= nil and inAir[name] == true end
+local respawned = {}
+env.respawnGroup = function(template, alias)
+  groups[alias] = { size = 1, tpl = template }
+  inAir[alias] = true
+  respawned[#respawned + 1] = { template = template, alias = alias }
+  return alias
+end
 env.menu.sub = function(name, parent)
   menuId = menuId + 1
   menus[menuId] = { name = name, parent = parent, kind = "sub", alive = true }
@@ -235,5 +249,24 @@ TR.resetRange()
 check(last():find("Range Reset"), "range reset message")
 local total = TR.totals()
 check(total == 0, "nothing left after Range Reset")
+
+-- Support aircraft: a lost AWACS and a landed tanker are both replaced from their templates
+groups["Overlord"] = nil
+run(10)
+check(last():find("AWACS Overlord is off station"), "lost AWACS announced")
+run(65)
+check(respawned[1] and respawned[1].template == "Overlord", "AWACS replaced from its template")
+check(last():find("AWACS Overlord is back on station"), "replacement announced")
+inAir["Texaco"] = false            -- landed at bingo
+run(20)
+check(groups["Texaco"] ~= nil, "a tanker on the ground isn't replaced straight away")
+run(30)
+check(groups["Texaco"] == nil, "landed tanker removed after the grace period")
+run(70)
+check(respawned[2] and respawned[2].template == "Texaco", "tanker replaced")
+local awacs = respawned[1].alias
+groups[awacs] = nil
+run(80)
+check(respawned[3] and respawned[3].template == "Overlord", "a replacement is replaced too")
 
 print(string.format("training_range.lua: %d checks passed", passed))
