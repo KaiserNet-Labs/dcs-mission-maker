@@ -99,6 +99,7 @@ class Builder(EnemyMixin, FriendlyMixin, PlayersMixin, RangeMixin, ScriptingMixi
         self.flight_bases = {}      # (callsign, number) -> airfield, when parking ran out
         self.support_groups = []    # AWACS/tankers the Training Range script replaces
         self.range_jtacs = {}       # Training Range: area id -> JTAC
+        self.range_control_groups = []  # Training Range: Range Control group names (Range Admin seats)
         objectives.reset_flags()
         if req.mission_type == "range":
             self.setup_range_layout()

@@ -611,12 +611,37 @@ def add_report():
     return jsonify({"ok": True})
 
 
+def _lua_escape(text):
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _hook_range_password():
+    """The Range Control password goes into the hook only for someone allowed to see it: on
+    the PC running the app, or with the builder password. The hook's download link is public."""
+    password = os.environ.get("RANGE_CONTROL_PASSWORD", "")
+    app_password = os.environ.get("APP_PASSWORD", "")
+    auth = request.authorization
+    allowed = _on_this_pc() or (app_password and auth and secrets.compare_digest(
+        (auth.password or "").encode(), app_password.encode()))
+    return password if allowed else ""
+
+
+def _reload_hours():
+    try:
+        hours = float(os.environ.get("RANGE_AUTO_RELOAD_HOURS", "") or 6)
+    except ValueError:
+        hours = 6
+    return f"{max(0.0, min(hours, 168.0)):g}"
+
+
 @app.get("/dcs-hook.lua")
 def dcs_hook():
     # Downloaded on the PC running the app (the DCS server's PC): report straight to it, not
     # out through the public address (behind Cloudflare Access, say) and back.
     url = ((not _on_this_pc() and integrations.status()["public_url"]) or request.host_url).rstrip("/")
-    text = HOOK.read_text(encoding="utf-8").replace("__APP_URL__", url)
+    text = (HOOK.read_text(encoding="utf-8").replace("__APP_URL__", url)
+            .replace("__RANGE_PASSWORD__", _lua_escape(_hook_range_password()))
+            .replace("__AUTO_RELOAD_HOURS__", _reload_hours()))
     return text, 200, {"Content-Type": "text/plain; charset=utf-8",
                        "Content-Disposition": "attachment; filename=dmm_reporter.lua"}
 

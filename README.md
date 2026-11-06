@@ -125,7 +125,7 @@ Generate button.
 |---|---|
 | **Maps** | Caucasus, Persian Gulf, Syria, Nevada, Marianas, Sinai, Kola, South Atlantic (Falklands, 1982), Germany (Cold War), Normandy (1944), The Channel |
 | **Missions** | CAP, CAS, SEAD/DEAD, Precision Strike, Anti-Ship, Combat Search & Rescue, Training Range |
-| **Training Range** | A long-running practice mission for your server. Six Range Areas (SEAD/DEAD, CAS, Strike, Air-to-Air, Anti-Ship on maps with sea, and a Helicopter area close to the helicopters' base) are drawn on the F10 map, each with Practice Targets that don't shoot back and come back a few minutes after they're destroyed (bombing circle, strafe pit, target vehicles and buildings, a radar for HARM shots). Players spawn enemy forces from **F10 > Other > Training Range**: pick an area, a role (Medium SAM, Armour column, Fighter pair...) and either the era default or a specific system from Vietnam to Modern (SA-2 to SA-10, T-55 to T-90, MiG-21 to Su-30...). Each area has its own difficulty (Easy: average skill, radars always on; Normal; Hard: excellent skill) and a Clear command. Armour, troops, convoys and aircraft can repeat until cleared; enemy aircraft stay inside their area. Caps stop the server filling up (6 spawns per area, 8 enemy aircraft, 25 in total). **Use the Default Roster** fills in two 2-ships (hot and cold start) of 13 popular aircraft, each with a Flight Role that sets its loadout and the area its route goes to; flights that don't fit the home field start at the next friendly field. Drag the areas on the builder map; since the app can't tell land from sea, check a moved area in the Mission Editor. WWII and Korea ranges get their own areas (Flak / Ground Attack instead of SEAD/DEAD). Two JTACs work the range (Axeman on 266.0 for CAS, Darknight on 267.0 for the Helicopter area, both laser 1688, both on every flight's radio presets), and the AWACS and tankers are replaced when they land or are lost. Every aircraft type gets **Range Guide** kneeboard pages: how to open the menu, where each area is, and each area's menu key by key. Older Free Flight setups open as a Training Range. (With Hound ELINT, a replacement AWACS isn't picked up as its sensor.) |
+| **Training Range** | A long-running practice mission for your server. Six Range Areas (SEAD/DEAD, CAS, Strike, Air-to-Air, Anti-Ship on maps with sea, and a Helicopter area close to the helicopters' base) are drawn on the F10 map, each with Practice Targets that don't shoot back and come back a few minutes after they're destroyed (bombing circle, strafe pit, target vehicles and buildings, a radar for HARM shots). Players spawn enemy forces from **F10 > Other > Training Range**: pick an area, a role (Medium SAM, Armour column, Fighter pair...) and either the era default or a specific system from Vietnam to Modern (SA-2 to SA-10, T-55 to T-90, MiG-21 to Su-30...). Each area has its own difficulty (Easy: average skill, radars always on; Normal; Hard: excellent skill) and a Clear command. Armour, troops, convoys and aircraft can repeat until cleared; enemy aircraft stay inside their area. Caps stop the server filling up (6 spawns per area, 8 enemy aircraft, 25 in total). **Use the Default Roster** fills in two 2-ships (hot and cold start) of 13 popular aircraft, each with a Flight Role that sets its loadout and the area its route goes to; flights that don't fit the home field start at the next friendly field. Drag the areas on the builder map; since the app can't tell land from sea, check a moved area in the Mission Editor. WWII and Korea ranges get their own areas (Flak / Ground Attack instead of SEAD/DEAD). Two JTACs work the range (Axeman on 266.0 for CAS, Darknight on 267.0 for the Helicopter area, both laser 1688, both on every flight's radio presets), and the AWACS and tankers are replaced when they land or are lost. Every aircraft type gets **Range Guide** kneeboard pages: how to open the menu, where each area is, and each area's menu key by key. **Range Control** is a Flight Role for the Range Admin's seats (the Default Roster adds a one-seat F-16C and Huey): whoever sits there gets **F10 > Other > Range Control** with *Range Reset* (clear everything, players stay in their aircraft) and *Clear all Marker Spawns*, and may use **Marker Spawn**: an F10 map marker reading `spawn sa10 hard`, `spawn mig29 repeat`, `clear` (within 1 nm) or `clear all markers` puts any range system anywhere on the map; the marker turns into ✔ or ✘ with the result. With the server hook installed, Range Control also gets *Mission Reload* (60-second countdown, then everyone goes back to slot selection), the hook reloads the range by itself every 6 hours while nobody is connected, and a **Range Control password** in Settings locks those seats until a player types `-rc <password>` in chat. Without the hook, anyone may take a Range Control seat. Older Free Flight setups open as a Training Range. (With Hound ELINT, a replacement AWACS isn't picked up as its sensor.) |
 | **Extra objectives** | Up to two more targets (air defense site, artillery battery, supply convoy, early-warning radar), either all briefed up front or unlocked one at a time with a radio call and coordinates when the previous one dies. |
 | **Living battlefield** | CAS columns push toward friendly armor holding a front line drawn on the F10 map. Hidden pop-up air defenses switch on when you get close (more on higher difficulty). Enemy fighters scramble when you approach instead of on a timer. |
 | **CSAR** | A downed pilot past the enemy airfield and a search party closing in. Helicopters find the survivor through MOOSE CSAR (beacon, smoke, flares) and bring them to the MASH; everyone else escorts and kills the search party. |
@@ -190,7 +190,13 @@ the mission runs it also records kills, losses, ejections, crashes, take-offs an
 landings and reads the objective flags (9000 = all done, 9001+ = each objective),
 and sends them every minute and at mission end for the Debrief tab. Once per DCS
 session it also lists the liveries installed on the server (DCS install and
-`Saved Games\Liveries`) for the builder's livery dropdowns.
+`Saved Games\Liveries`) for the builder's livery dropdowns. In a Training Range it
+tells the mission it's there (so Range Control gets *Mission Reload*), reloads the
+mission when Range Control asks or after *Reload Training Ranges every (hours)* with
+nobody connected, and locks the Range Control seats behind the *Range Control password*
+(both in Settings). Download the hook again after changing either: they're written into
+the file. The password is only written in when you download it on the app's PC or after
+entering the builder password.
 The app needs to be reachable from the DCS machine (`PUBLIC_URL`; on the same PC, `http://localhost:8080` works). It uses the
 LuaSocket library that ships with DCS. **It hasn't been run inside DCS yet.**
 
@@ -283,6 +289,7 @@ docker run --rm -v /tmp/lua:/lua:ro debian:stable-slim sh -c \
 # Training Range runtime under Lua 5.1 with DCS stubbed: unit tests, then every generated config
 docker run --rm -v $PWD:/src:ro -v /tmp/lua:/lua:ro -w /src debian:stable-slim sh -c \
   'apt-get update -qq && apt-get install -y -qq lua5.1 >/dev/null && lua5.1 tests/lua/test_training_range.lua \
+   && lua5.1 tests/lua/test_hook.lua && lua5.1 tests/lua/test_hook.lua "" \
    && lua5.1 tests/lua/test_generated_config.lua /lua/*range_config.lua'
 ```
 
@@ -309,7 +316,7 @@ docker run --rm -v $PWD:/src:ro -v /tmp/lua:/lua:ro -w /src debian:stable-slim s
 | `app/objectives.py` | Extra/chained objectives, front line, pop-up threats, zone triggers |
 | `app/range_catalog.py` | Training Range catalogue: Range Areas, Spawn Roles, Spawnable systems per side, era defaults, Practice Targets, Default Roster, caps |
 | `app/generator/range.py` | Training Range build: area placement, Practice Targets, spawn templates, the generated Lua config |
-| `app/lua/training_range.lua`, `tests/lua/` | The in-game Training Range runtime (F10 menu, caps, clear, difficulty, repeats, Practice Target respawns) and its Lua tests |
+| `app/lua/training_range.lua`, `tests/lua/` | The in-game Training Range runtime (F10 menu, caps, clear, difficulty, repeats, Practice Target respawns, Range Control menu, Marker Spawn, Mission Reload countdown) and its Lua tests, plus the hook's Training Range tests |
 | `CONTEXT.md`, `docs/adr/` | Domain glossary and architecture decision records |
 | `app/navdata.py` | Airfield TACAN/ILS/tower data and runway in use |
 | `app/mods.py` | Community mod aircraft and units |
@@ -330,7 +337,7 @@ docker run --rm -v $PWD:/src:ro -v /tmp/lua:/lua:ro -w /src debian:stable-slim s
 | `app/__main__.py`, `windows/*.bat` | `python -m app` (waitress server, reads `.env`); Windows setup, start, autostart, firewall and build scripts |
 | `app/desktop.py`, `app/icon.py`, `windows/launcher.py`, `windows/dcs-mission-maker.spec` | The Windows app: tray icon, single instance, start with Windows, logs; its icon; the PyInstaller recipe |
 | `app/settings.py`, `app/templates/settings.html`, `app/static/js/settings.js` | The Settings page: settings.json, validation, locked `.env` values, secrets never sent back |
-| `dcs-hook/dmm_reporter.lua` | DCS server hook: script-error check and debrief events |
+| `dcs-hook/dmm_reporter.lua` | DCS server hook: script-error check, debrief events, liveries, Training Range reload and Range Control seat lock |
 | `app/debrief.py` | Turns the hook's events and flags into the Debrief tab |
 | `app/mission_store.py` | Temporary vs kept missions, expiry and deletion |
 | `app/liveries.py`, `app/data/liveries.json`, `tools/build_liveries.py` | Livery choices: squadron liveries from DCS Retribution (LGPL-3.0, pinned commit; the tool documents how to rebuild the JSON) merged with what the server hook reports |

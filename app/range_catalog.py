@@ -501,18 +501,24 @@ DEFAULT_ROSTER = [
     ("UH-1H", "cas", "cas", "airfield"),
 ]
 FLIGHT_ROLES = {"aa": "Air-to-Air", "sead": "SEAD", "cas": "CAS", "strike": "Strike",
-                "antiship": "Anti-Ship"}
+                "antiship": "Anti-Ship", "control": "Range Control"}
+# Range Control seats (ADR 0001): one seat each, so the Range Admin can fly a jet or a helicopter.
+RANGE_CONTROL_ROSTER = ["F-16C_50", "UH-1H"]
+CONTROL_SUFFIX = " - Range Control"     # group names end with this; the server hook matches it
 # Flight Role -> the Range Area its route goes to (helicopters fly CAS to the Helicopter area).
 ROLE_AREA = {"aa": "a2a", "sead": "sead", "cas": "cas", "strike": "strike", "antiship": "antiship"}
 
 
 def default_roster(has_carrier):
-    """Flight requests for the Default Roster: two 2-ships per type, hot then cold."""
+    """Flight requests for the Default Roster: two 2-ships per type, hot then cold, then the
+    one-seat Range Control flights."""
     out = []
     for ac, role1, role2, base in DEFAULT_ROSTER:
         b = base if has_carrier else "airfield"
         out.append({"aircraft": ac, "slots": 2, "start": "hot", "base": b, "role": role1})
         out.append({"aircraft": ac, "slots": 2, "start": "cold", "base": b, "role": role2})
+    for ac in RANGE_CONTROL_ROSTER:
+        out.append({"aircraft": ac, "slots": 1, "start": "hot", "base": "airfield", "role": "control"})
     return out
 
 

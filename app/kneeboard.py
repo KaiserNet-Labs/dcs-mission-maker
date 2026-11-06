@@ -311,6 +311,32 @@ def range_area_page(area, guide, path):
     p.save(path)
 
 
+def range_control_page(guide, path):
+    """Training Range cheat sheet for Range Control seats: the admin menu and Marker Spawn."""
+    p = Page(NIGHT if guide.get("night") else DAY)
+    p.title("Range Control", "\\ > F10 Other > Range Control  (you're the Range Admin)")
+    p.line("If the server says Range Control is locked, type  -rc <password>  in chat, then take "
+           "the seat again. Admin rights last while you sit here.")
+    p.heading("Menu")
+    p.numbered("F1", "Range Reset", "Clears every area and every Marker Spawn; players stay in "
+               "their aircraft.")
+    p.numbered("F2", "Clear all Marker Spawns", "Leaves the Range Areas alone.")
+    p.numbered("F3", "Marker Spawn help", "Shows the commands below on screen.")
+    p.numbered("F4", "Mission Reload", "Only when the server hook is installed: 60 s countdown, then "
+               "everyone goes back to slot selection. F5 cancels it.")
+    p.heading("Marker Spawn (F10 map marker text)")
+    p.line("spawn <name> [easy|normal|hard] [repeat]", mono=True)
+    p.line("clear              Marker Spawns within 1 nm", mono=True)
+    p.line("clear all markers", mono=True)
+    p.line(f"Normal unless you say. Only the range-wide limits apply ({guide['caps']['aircraft']} enemy "
+           f"aircraft, {guide['caps']['total']} spawns). Fighters stay within about 20 nm of the "
+           "marker. The marker turns into ✔ or ✘ with the result.")
+    p.heading("Names")
+    for role, names in guide["marker_names"]:
+        p.line(f"{role}: {' '.join(names)}", size=13)
+    p.save(path)
+
+
 def text_pages(title, sub, text, palette=DAY, size=14):
     """A plain-text document (e.g. the briefing, or a pilot's notes page) as kneeboard-sized
     pages; ALL-CAPS lines become headings. Returns PIL images, starting a new page whenever

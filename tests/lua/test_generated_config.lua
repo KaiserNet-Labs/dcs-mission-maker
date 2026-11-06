@@ -37,6 +37,17 @@ local function runOne(path)
   env.staticAlive = function(name) return statics[name] ~= nil end
   env.destroyStatic = function(name) statics[name] = nil end
   env.setFlag = function() end
+  env.getFlag = function() return 0 end
+  local handler
+  env.watchEvents = function(h) handler = h end
+  env.menu.groupSub = function() menuId = menuId + 1 return menuId end
+  env.menu.groupCmd = function() menuId = menuId + 1 return menuId end
+  env.menu.groupRemove = function() end
+  env.messageGroup = function() end
+  env.messageAll = function() end
+  env.markRemove = function() end
+  local lastMark
+  env.markAdd = function(_, text) lastMark = text end
   env.groupInAir = function() return true end
   env.respawnGroup = function(tpl, alias) groups[alias] = 1 return alias end
   for _, s in ipairs(DMM_RANGE.support or {}) do
@@ -101,6 +112,29 @@ local function runOne(path)
     end
   end
   TR.resetRange()
+
+  -- Range Control seats and Marker Spawn: every system spawns by its id, and every name the
+  -- kneeboard or a pilot might use resolves (or is reported as ambiguous), never errors.
+  assert(handler, path .. ": events not watched")
+  local admin = DMM_RANGE.range_control[1]
+  if admin then
+    handler({ kind = "birth", group = admin, groupId = 7 })
+    local idx = 0
+    for sid, sys in pairs(DMM_RANGE.systems) do
+      assert(TR.lookup(sid) == sid, path .. ": marker name " .. sid .. " doesn't resolve")
+      for _, a in ipairs(sys.aliases or {}) do
+        local got, why = TR.lookup(a)
+        assert(got or why:find("could be"), path .. ": alias " .. a .. ": " .. tostring(why))
+      end
+      idx = idx + 1
+      handler({ kind = "mark", idx = idx, text = "spawn " .. sid, group = admin, groupId = 7,
+                pos = { x = 1000, y = 1000 } })
+      assert(lastMark and (lastMark:find("^✔") or lastMark:find("full") or lastMark:find("Too many")),
+        path .. ": marker spawn " .. sid .. " -> " .. tostring(lastMark))
+      if lastMark:find("^✔") then spawned = spawned + 1 end
+      TR.clearMarkers(nil)
+    end
+  end
   return #commands, spawned, levels
 end
 

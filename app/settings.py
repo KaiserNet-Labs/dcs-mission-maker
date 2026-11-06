@@ -41,6 +41,16 @@ FIELDS = {
                     "Your usual SRS voice server, e.g. srs.example.com:5002. The default for each mission."),
     "SRS_NOTE": ("DCS server", "SRS note", "text",
                  "e.g. \"password in #dcs-info\". Never the password itself."),
+    "RANGE_CONTROL_PASSWORD": ("DCS server", "Range Control password", "secret",
+                               "Training Range: with the server hook installed, players type -rc <password> "
+                               "in chat before they can take a Range Control seat. Empty = anyone may. "
+                               "Download the hook again after changing it, on the PC running this app "
+                               "(or after entering the builder password): the hook's link is public, so "
+                               "elsewhere it comes without the password."),
+    "RANGE_AUTO_RELOAD_HOURS": ("DCS server", "Reload Training Ranges every (hours)", "number",
+                                "The server hook reloads a running Training Range after this long, but only "
+                                "while nobody is connected. 0 = never. Default 6. Download the hook again "
+                                "after changing it."),
     "SRS_EAM_ROTATE": ("SRS password rotation", "New External AWACS passwords on publish", "toggle",
                        "Each time a mission is copied to the server: random blue and red EAM passwords "
                        "go into SRS's server.cfg, and SRS is restarted (everyone on SRS drops for a few "
@@ -67,7 +77,7 @@ FIELDS = {
 # Shown in empty fields: what the app uses when a setting isn't set.
 DEFAULTS = {"UPDATE_CHECK": "on", "MAPS_FILTER": "on", "SRS_EAM_ROTATE": "off",
             "MISSION_TTL_HOURS": "24", "PORT": "8080", "SFTP_PORT": "22",
-            "SRS_ADDRESS": "srs.example.com:5002"}
+            "SRS_ADDRESS": "srs.example.com:5002", "RANGE_AUTO_RELOAD_HOURS": "6"}
 
 # Set in the environment when the app started: these win and can't be changed here.
 LOCKED = {k for k in FIELDS if os.environ.get(k, "").strip()}
@@ -153,6 +163,8 @@ def _check(key, value):
             return "Should be a port number (1-65535)."
         if key == "MISSION_TTL_HOURS" and n < 0.25:
             return "At least 0.25 hours."
+        if key == "RANGE_AUTO_RELOAD_HOURS" and not 0 <= n <= 168:
+            return "Between 0 (never) and 168 hours."
     if kind == "folder" and not Path(value).is_dir():
         return "That folder doesn't exist on this PC."
     if key == "DCS_INSTALL_DIR" and not (Path(value) / "Mods" / "terrains").is_dir():

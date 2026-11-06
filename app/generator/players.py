@@ -63,6 +63,8 @@ class PlayersMixin:
             route = self.route_player(g, cruise_alt, cruise_spd, heli, f)
             if heli:
                 self.heli_groups.append(group_name)
+            if r.mission_type == "range" and f.role == "control":
+                self.range_control_groups.append(group_name)
 
             carrier = f.base == "carrier"
             origin = self.carrier.position if carrier else self.flight_home(f).position
@@ -90,6 +92,7 @@ class PlayersMixin:
                 "squadron": f.squadron, "seats": f.slots, "ai": f.ai_wingmen, "base": base,
                 "pilots": pilots, "timing": getattr(f, "timing", None),
                 "start": f.start, "loadout": f"{loadout}: {kit}", "tasking": tasking,
+                "flight_role": f.role if r.mission_type == "range" else "",
                 "range_area": self.flight_area_label(f), "range_area_id": self.flight_area_id(f),
                 "route": route, "origin": origin, "carrier": carrier,
                 "radios": radio_table(applied)})

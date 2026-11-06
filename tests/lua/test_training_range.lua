@@ -8,10 +8,15 @@ DMM_RANGE = {
   flags = { range = 9032, hook = 9030, reload = 9031 },
   support = { { group = "Overlord", label = "AWACS Overlord" }, { group = "Texaco", label = "Tanker Texaco" } },
   support_respawn = 60,
+  range_control = { "Enfield 9 - Range Control" },
+  marker = { leash = 37040, clear_radius = 1852, difficulty = "normal" },
+  reload_countdown = 60,
   systems = {
-    sa11 = { label = "SA-11", kind = "ground", radar = true, templates = { ["2"] = "TR_TPL sa11" } },
-    t72 = { label = "T-72 column", kind = "ground", radar = false, templates = { ["2"] = "TR_TPL t72" } },
-    hq = { label = "Command post", kind = "static",
+    sa11 = { label = "SA-11", kind = "ground", radar = true, templates = { ["2"] = "TR_TPL sa11" },
+             aliases = { "sa-11", "buk" } },
+    t72 = { label = "T-72 column", kind = "ground", radar = false, templates = { ["2"] = "TR_TPL t72" },
+            aliases = { "t-72", "supply" } },
+    hq = { label = "Command post", kind = "static", aliases = { "supply" },
            statics = { { type = "Military staff", category = "Fortifications", bearing = 0, dist = 0 },
                        { type = "Barracks 2", category = "Fortifications", bearing = 90, dist = 80 } } },
     su27 = { label = "Su-27", kind = "air", helicopter = false, alt = 6500, speed = 220,
@@ -89,6 +94,32 @@ env.menu.remove = function(id)
   end
   kill(id)
 end
+
+local hookFlag, eventHandler = 0, nil
+local groupMenus, groupMessages, allMessages, marks, removedMarks = {}, {}, {}, {}, {}
+env.getFlag = function(n) if n == 9030 then return hookFlag end return flags[n] or 0 end
+env.watchEvents = function(handler) eventHandler = handler end
+env.menu.groupSub = function(gid, name, parent)
+  menuId = menuId + 1
+  groupMenus[menuId] = { gid = gid, name = name, parent = parent, alive = true }
+  return menuId
+end
+env.menu.groupCmd = function(gid, name, parent, fn, arg)
+  menuId = menuId + 1
+  groupMenus[menuId] = { gid = gid, name = name, parent = parent, fn = fn, arg = arg, alive = true }
+  return menuId
+end
+env.menu.groupRemove = function(gid, id)
+  local function kill(i)
+    groupMenus[i].alive = false
+    for j, m in pairs(groupMenus) do if m.parent == i and m.alive then kill(j) end end
+  end
+  kill(id)
+end
+env.messageGroup = function(gid, text) groupMessages[#groupMessages + 1] = { gid = gid, text = text } end
+env.messageAll = function(text) allMessages[#allMessages + 1] = text end
+env.markRemove = function(id) removedMarks[id] = true end
+env.markAdd = function(id, text, pos) marks[id] = { text = text, pos = pos } end
 
 local function run(seconds)
   local stop = now + seconds
@@ -268,5 +299,144 @@ local awacs = respawned[1].alias
 groups[awacs] = nil
 run(80)
 check(respawned[3] and respawned[3].template == "Overlord", "a replacement is replaced too")
+
+-- ---------------------------------------------------------------- Range Control and Marker Spawn
+TR.resetRange()
+check(eventHandler ~= nil, "events watched")
+local function adminItems(gid)
+  local rootId
+  for id, m in pairs(groupMenus) do if m.alive and m.gid == gid and m.parent == nil then rootId = id end end
+  if not rootId then return nil end
+  local out = {}
+  for id, m in pairs(groupMenus) do if m.alive and m.parent == rootId then out[#out + 1] = { id = id, m = m } end end
+  table.sort(out, function(a, b) return a.id < b.id end)
+  return out
+end
+local function itemNames(gid)
+  local names = {}
+  for _, c in ipairs(adminItems(gid) or {}) do names[#names + 1] = c.m.name end
+  return table.concat(names, "|")
+end
+local function pressAdmin(gid, name)
+  for _, c in ipairs(adminItems(gid)) do if c.m.name == name then return c.m.fn(c.m.arg) end end
+  error("no admin item " .. name)
+end
+
+eventHandler({ kind = "birth", group = "Viper 1 - SEAD", groupId = 11 })
+check(adminItems(11) == nil, "no admin menu for other flights")
+eventHandler({ kind = "birth", group = "Enfield 9 - Range Control", groupId = 42 })
+check(itemNames(42) == "Range Reset (clear everything)|Clear all Marker Spawns|Marker Spawn help",
+  "admin menu without the hook: " .. itemNames(42))
+check(groupMessages[#groupMessages].text:find("Range Admin"), "seat greeting")
+eventHandler({ kind = "birth", group = "Enfield 9 - Range Control", groupId = 42 })
+local roots = 0
+for _, m in pairs(groupMenus) do if m.alive and m.gid == 42 and m.parent == nil then roots = roots + 1 end end
+check(roots == 1, "a second birth in the seat doesn't duplicate the menu")
+pressAdmin(42, "Marker Spawn help")
+check(groupMessages[#groupMessages].text:find("spawn sa10"), "marker help")
+
+-- parsing
+local c = TR.parseMarker("  Spawn  SA-10   Hard Repeat ")
+check(c.cmd == "spawn" and c.name == "sa-10" and c.difficulty == "hard" and c.repeating, "parse full command")
+c = TR.parseMarker("spawn mig 29 easy")
+check(c.name == "mig 29" and c.difficulty == "easy" and not c.repeating, "parse multi-word name")
+check(TR.parseMarker("clear").cmd == "clear" and TR.parseMarker("Clear all markers").cmd == "clearall", "parse clear")
+check(TR.parseMarker("tanker track here") == nil and TR.parseMarker("spawn") == nil, "ordinary markers ignored")
+check(TR.lookup("SA11") == "sa11" and TR.lookup("Buk") == "sa11" and TR.lookup("t 72") == "t72", "lookup aliases")
+local sid, why = TR.lookup("supply")
+check(sid == nil and why:find("could be Command post or T%-72 column"), "ambiguous name: " .. tostring(why))
+sid, why = TR.lookup("sa01")
+check(sid == nil and why == "unknown system 'sa01'", "unknown name")
+
+local function mark(idx, text, who, pos)
+  eventHandler({ kind = "mark", idx = idx, text = text, group = who and who.group, groupId = who and who.id,
+                 pos = pos or { x = 200000, y = 5000 } })
+end
+local admin = { group = "Enfield 9 - Range Control", id = 42 }
+local viper = { group = "Viper 1 - SEAD", id = 11 }
+local function lastMark() local best, text = -1, nil for id, m in pairs(marks) do if id > best then best, text = id, m.text end end return text end
+
+mark(1, "my notes", admin)
+check(not removedMarks[1], "ordinary marker left alone")
+mark(2, "spawn sa11", viper)
+check(removedMarks[2] and lastMark():find("^✘ Range Admins only"), "non-admin refused")
+local logged = env.log
+env.log = function() end
+mark(3, "spawn sa11", nil)
+env.log = logged
+check(lastMark():find("^✘ can't tell who"), "unknown author refused")
+check(TR.totals() == 0, "refused markers spawn nothing")
+
+mark(4, "spawn sa-11 hard", admin, { x = 200000, y = 5000 })
+check(removedMarks[4] and lastMark() == "✔ SA-11 (Hard)", "admin marker spawn: " .. tostring(lastMark()))
+local m1 = next(TR.markers)
+check(groups[TR.markers[m1].group].skill == "Excellent", "Hard marker spawn = Excellent")
+check(groups[TR.markers[m1].group].pos.x == 200000, "spawned at the marker")
+check(groupMessages[#groupMessages].gid == 42, "result told to the admin's group")
+mark(5, "spawn su27 repeat", admin, { x = 300000, y = 0 })
+check(lastMark() == "✔ Su-27 (Normal, repeating)", "fighter marker spawn: " .. tostring(lastMark()))
+local fighter
+for _, s in pairs(TR.markers) do if s.system == "su27" then fighter = s end end
+check(tasks[fighter.group].radius == 37040 and tasks[fighter.group].center.x == 300000, "marker fighter leashed ~20 nm")
+check(groups[fighter.group].tpl == "TR_TPL su27 x2", "marker fighter is a pair")
+mark(6, "spawn hq repeat", admin, { x = 201000, y = 5000 })
+check(lastMark() == "✔ Command post (Normal) (can't repeat)", "statics can't repeat: " .. tostring(lastMark()))
+mark(7, "spawn sa01", admin)
+check(lastMark() == "✘ unknown system 'sa01'", "unknown system on the marker")
+local total = TR.totals()
+check(total == 3, "marker spawns count toward the total cap")
+
+-- caps: the total cap (5) applies to Marker Spawns
+press("Training Range", "SEAD/DEAD", "Medium SAM", "SA-11 (era default)")
+press("Training Range", "SEAD/DEAD", "Medium SAM", "SA-11 (era default)")
+mark(8, "spawn t72", admin)
+check(lastMark():find("^✘ The range is full"), "total cap applies: " .. tostring(lastMark()))
+press("Training Range", "SEAD/DEAD", "Clear SEAD/DEAD")
+check(TR.totals() == 3, "Area Clear leaves Marker Spawns")
+
+-- repeating marker fighter comes back at the marker
+groups[fighter.group].size = 0
+run(10)
+check(last():find("Marker Spawn Su%-27 destroyed%. Another one"), "marker repeat announced")
+run(125)
+local back
+for _, s in pairs(TR.markers) do if s.system == "su27" then back = s end end
+check(back and back.id ~= fighter.id and back.pos.x == 300000, "marker repeat respawned at the marker")
+
+-- clear: only Marker Spawns within 1 nm
+mark(9, "clear", admin, { x = 200500, y = 5000 })
+check(lastMark() == "✔ cleared 2 Marker Spawn(s) within 1 nm", "clear nearby: " .. tostring(lastMark()))
+check(TR.totals() == 1, "fighter far away is kept")
+groups[back.group].size = 0
+run(10)
+mark(10, "clear all markers", admin)
+check(lastMark() == "✔ cleared 0 Marker Spawn(s)", "clear all")
+run(200)
+check(TR.totals() == 0, "clear all cancels a pending marker repeat")
+mark(11, "spawn t72", admin)
+TR.resetRange()
+check(TR.totals() == 0, "Range Reset clears Marker Spawns")
+
+-- Mission Reload: only with the hook; 60 s countdown; can be cancelled
+check(TR.requestReload(42) == false and groupMessages[#groupMessages].text:find("needs the DCS Mission Maker hook"),
+  "reload needs the hook")
+hookFlag = 1
+run(10)
+check(itemNames(42):find("Mission Reload %(60 s countdown%)|Cancel Mission Reload"), "hook adds reload items: " .. itemNames(42))
+pressAdmin(42, "Mission Reload (60 s countdown)")
+check(allMessages[#allMessages]:find("Mission Reload in 60 seconds"), "countdown announced to everyone")
+check(TR.requestReload(42) == false, "only one countdown at a time")
+run(31)
+check(allMessages[#allMessages] == "Mission Reload in 30 seconds.", "30 s warning")
+pressAdmin(42, "Cancel Mission Reload")
+run(40)
+check(flags[9031] == nil and allMessages[#allMessages] == "Mission Reload cancelled.", "cancelled reload doesn't fire")
+pressAdmin(42, "Mission Reload (60 s countdown)")
+run(59)
+check(flags[9031] == nil, "not before the countdown ends")
+run(2)
+check(flags[9031] == 1 and allMessages[#allMessages] == "Reloading the mission now.", "reload flag set for the hook")
+local st = TR.state()
+check(st[#st].id == "markers", "state lists Marker Spawns")
 
 print(string.format("training_range.lua: %d checks passed", passed))

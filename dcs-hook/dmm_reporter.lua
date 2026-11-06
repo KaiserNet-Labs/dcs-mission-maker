@@ -14,6 +14,11 @@
 -- 3. Liveries: once per DCS session it lists the liveries installed on this
 --    machine (DCS install and Saved Games\Liveries) so the app's livery
 --    dropdowns show every livery your server has, by its in-game name.
+-- 4. Training Range missions: tells the mission the hook is here (so Range Control
+--    gets Mission Reload), reloads the mission when Range Control asks, reloads it by
+--    itself every few hours while nobody is connected, and, when a Range Control
+--    password is set in the app's Settings, locks the Range Control seats until a
+--    player types  -rc <password>  in chat.
 -- EXPERIMENTAL: not yet tested inside DCS.
 
 local APP_URL = "__APP_URL__"
@@ -22,13 +27,23 @@ local DEBRIEF_EVERY_SECONDS = 60
 local FIRST_FLAG, LAST_FLAG = 9000, 9010
 local MAX_EVENTS = 500
 
+-- Training Range (filled in by the app when you download this file)
+local RANGE_PASSWORD = "__RANGE_PASSWORD__"          -- "" = Range Control seats open to anyone
+local AUTO_RELOAD_HOURS = tonumber("__AUTO_RELOAD_HOURS__") or 6   -- 0 = never
+local RANGE_FLAG, HOOK_FLAG, RELOAD_FLAG = 9032, 9030, 9031
+local CONTROL_SUFFIX = " - Range Control"
+local RANGE_POLL_SECONDS = 5
+local MAX_PASSWORD_TRIES = 5
+if RANGE_PASSWORD:find("^__") then RANGE_PASSWORD = "" end
+
 package.path = package.path .. ";.\\LuaSocket\\?.lua"
 package.cpath = package.cpath .. ";.\\LuaSocket\\?.dll"
 local ok_http, http = pcall(require, "socket.http")
 local ok_ltn, ltn12 = pcall(require, "ltn12")
 
 local dmm = { logOffset = 0, checkAt = nil, mission = "", events = {}, sent = 0, debriefAt = nil,
-              liveriesSent = false }
+              liveriesSent = false, missionPath = nil, isRange = false, rangeAt = nil,
+              startedAt = nil, reloading = false, unlocked = {}, tries = {} }
 local logPath = lfs.writedir() .. "Logs\\dcs.log"
 
 local function fileSize(path)
@@ -205,6 +220,65 @@ local function sendLiveries()
   log.write("DMM", log.INFO, "Sent installed liveries -> HTTP " .. tostring(code))
 end
 
+-- ------------------------------------------------------------- training range
+local function setFlag(n, v)
+  local code = "trigger.action.setUserFlag(" .. n .. ", " .. v .. ") return 'ok'"
+  local ok, res = pcall(net.dostring_in, "server", code)
+  if ok and res == "ok" then return true end
+  ok = pcall(net.dostring_in, "mission", 'a_do_script("trigger.action.setUserFlag(' .. n .. ', ' .. v .. ')")')
+  return ok
+end
+
+local function playersOnline()
+  local ok, ids = pcall(net.get_player_list)
+  if not ok or type(ids) ~= "table" then return 0 end
+  local me = net.get_my_player_id and net.get_my_player_id() or 1
+  local n = 0
+  for _, id in ipairs(ids) do if id ~= me then n = n + 1 end end
+  return n
+end
+
+local function reloadMission(why)
+  if dmm.reloading or not dmm.missionPath then return end
+  dmm.reloading = true
+  log.write("DMM", log.INFO, "Training Range: reloading " .. dmm.missionPath .. " (" .. why .. ")")
+  local ok, err = pcall(net.load_mission, dmm.missionPath)
+  if not ok then   -- stays "reloading", so a broken reload isn't retried every 5 s
+    log.write("DMM", log.ERROR, "Training Range: reload failed: " .. tostring(err))
+  end
+end
+
+local function pollRange()
+  if not dmm.isRange then
+    dmm.isRange = readFlag(RANGE_FLAG) == 1
+    if not dmm.isRange then return end
+    log.write("DMM", log.INFO, "Training Range mission: Range Control reload and seat lock active")
+  end
+  if readFlag(HOOK_FLAG) ~= 1 then setFlag(HOOK_FLAG, 1) end
+  if readFlag(RELOAD_FLAG) == 1 then
+    reloadMission("asked for by Range Control")
+  elseif AUTO_RELOAD_HOURS > 0 and dmm.startedAt
+      and DCS.getRealTime() - dmm.startedAt >= AUTO_RELOAD_HOURS * 3600 and playersOnline() == 0 then
+    reloadMission("automatic, server empty")
+  end
+end
+
+-- The group a slot belongs to ("123" or "123_2" for a second crew seat).
+local function slotGroup(slotID)
+  local id = tonumber(tostring(slotID or ""):match("^(%d+)"))
+  if not id then return nil end
+  local ok, name = pcall(DCS.getUnitProperty, id, DCS.UNIT_GROUPNAME)
+  if ok and type(name) == "string" then return name end
+  return nil
+end
+
+local function isControlSlot(slotID)
+  local group = slotGroup(slotID)
+  return group ~= nil and group:sub(-#CONTROL_SUFFIX) == CONTROL_SUFFIX
+end
+
+local function tell(playerID, text) pcall(net.send_chat_to, text, playerID) end
+
 local events = {}
 
 function events.kill(killerId, killerType, killerSide, victimId, victimType, victimSide, weapon)
@@ -242,11 +316,15 @@ function callbacks.onMissionLoadBegin()
   dmm.logOffset = fileSize(logPath)
   dmm.checkAt = nil
   dmm.events, dmm.sent, dmm.debriefAt = {}, 0, nil
+  dmm.isRange, dmm.rangeAt, dmm.reloading = false, nil, false
 end
 
 function callbacks.onSimulationStart()
   dmm.mission = DCS.getMissionFilename and DCS.getMissionFilename() or DCS.getMissionName()
+  dmm.missionPath = DCS.getMissionFilename and DCS.getMissionFilename() or nil
   dmm.mission = tostring(dmm.mission):match("([^\\/]+)$") or dmm.mission
+  dmm.startedAt = DCS.getRealTime()
+  dmm.rangeAt = DCS.getRealTime() + RANGE_POLL_SECONDS
   dmm.checkAt = DCS.getRealTime() + CHECK_AFTER_SECONDS
   dmm.debriefAt = DCS.getRealTime() + DEBRIEF_EVERY_SECONDS
   if not dmm.liveriesSent then
@@ -268,7 +346,38 @@ function callbacks.onSimulationStop()
     local ok, err = pcall(sendDebrief, true)
     if not ok then log.write("DMM", log.ERROR, tostring(err)) end
   end
-  dmm.debriefAt = nil
+  dmm.debriefAt, dmm.rangeAt = nil, nil
+end
+
+-- Range Control seats: locked until "-rc <password>" when a password is set (ADR 0001).
+function callbacks.onPlayerTryChangeSlot(playerID, side, slotID)
+  if RANGE_PASSWORD == "" or dmm.unlocked[playerID] then return end
+  local ok, control = pcall(isControlSlot, slotID)
+  if ok and control then
+    tell(playerID, "Range Control is locked. Type  -rc <password>  in chat, then take the seat again.")
+    return false
+  end
+end
+
+function callbacks.onPlayerTrySendChat(playerID, msg, all)
+  local given = tostring(msg or ""):match("^%s*%-rc%s+(.-)%s*$")
+  if not given then return end
+  if RANGE_PASSWORD == "" then
+    tell(playerID, "Range Control seats aren't locked on this server: just take one.")
+  elseif (dmm.tries[playerID] or 0) >= MAX_PASSWORD_TRIES then
+    tell(playerID, "Too many wrong Range Control passwords. Reconnect to try again.")
+  elseif given == RANGE_PASSWORD then
+    dmm.unlocked[playerID] = true
+    tell(playerID, "Range Control unlocked: take a Range Control seat.")
+  else
+    dmm.tries[playerID] = (dmm.tries[playerID] or 0) + 1
+    tell(playerID, "Wrong Range Control password.")
+  end
+  return ""     -- never show the password in chat
+end
+
+function callbacks.onPlayerDisconnect(playerID)
+  dmm.unlocked[playerID], dmm.tries[playerID] = nil, nil
 end
 
 function callbacks.onSimulationFrame()
@@ -276,6 +385,11 @@ function callbacks.onSimulationFrame()
     dmm.checkAt = nil
     local ok, err = pcall(function() report(scanErrors()) end)
     if not ok then log.write("DMM", log.ERROR, tostring(err)) end
+  end
+  if dmm.rangeAt and DCS.getRealTime() >= dmm.rangeAt then
+    dmm.rangeAt = DCS.getRealTime() + RANGE_POLL_SECONDS
+    local ok, err = pcall(pollRange)
+    if not ok then log.write("DMM", log.ERROR, "range: " .. tostring(err)) end
   end
   if dmm.debriefAt and DCS.getRealTime() >= dmm.debriefAt then
     dmm.debriefAt = DCS.getRealTime() + DEBRIEF_EVERY_SECONDS

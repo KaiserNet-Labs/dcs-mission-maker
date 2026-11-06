@@ -81,9 +81,16 @@ class BriefingMixin:
                           "radius_km": a["radius"] / 1000, "roles": roles,
                           "difficulty_key": fkey(len(roles) + 1), "clear_key": fkey(len(roles) + 2),
                           "practice": a["practice"], "jtac": jtac["text"] if jtac else None})
+        names, seen = [], set()
+        for p in self.range_layout.areas:
+            for role, ids in rc.menu_for(p.area, self.era, self.enemy_side):
+                fresh = [i for i in ids if i not in seen]
+                seen.update(fresh)
+                if fresh:
+                    names.append((role.label, fresh))
         return {"title": mission["title"], "night": mission["night"], "areas": areas,
                 "support": mission["support"], "caps": rc.CAPS,
-                "difficulty": self.area_difficulty.capitalize()}
+                "difficulty": self.area_difficulty.capitalize(), "marker_names": names}
 
     def add_range_kneeboards(self, mission):
         """The Range Guide pages, after each aircraft type's own flight pages."""
@@ -98,6 +105,13 @@ class BriefingMixin:
         for utype in dict.fromkeys(c["type"] for c in self.cards):
             for f in files:
                 self.m.add_aircraft_kneeboard(utype, Path(f))
+        control = list(dict.fromkeys(c["type"] for c in self.cards if c.get("flight_role") == "control"))
+        if control:
+            path = os.path.join(self.workdir, "kneeboard_range_control.png")
+            kneeboard.range_control_page(guide, path)
+            self.range_kneeboards.append({"page": "range_control", "label": "Range Control"})
+            for utype in control:
+                self.m.add_aircraft_kneeboard(utype, Path(path))
 
     # ----------------------------------------------------------------- route page
     def nav_log(self, card):
@@ -229,7 +243,7 @@ class BriefingMixin:
                 "name": c["name"], "aircraft": c["aircraft"], "type": c["type"].id, "squadron": c["squadron"],
                 "seats": c["seats"], "ai": c["ai"], "base": c["base"], "start": c["start"],
                 "loadout": c["loadout"], "radios": c["radios"], "pilots": c["pilots"],
-                "timing": c["timing"], "kneeboard": i + 1,
+                "timing": c["timing"], "kneeboard": i + 1, "flight_role": c.get("flight_role") or "",
                 "kneeboards": [{"page": f"{i + 1}", "label": "Flight"}, {"page": f"{i + 1}_route", "label": "Route"}],
                 "route": [{"name": w["name"], "kind": w["kind"], "pos": latlng_pair(w["pos"]),
                            "alt_ft": round(w["alt"] * 3.281, -2) if w["alt"] else 0,

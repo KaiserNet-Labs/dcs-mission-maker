@@ -91,9 +91,19 @@ for key in ("caucasus", "marianas", "persiangulf", "syria", "nevada", "germany")
     check(" - SEAD" in mission and " - Air-to-Air" in mission, f"{key}: Flight Role in slot names")
     z = zipfile.ZipFile(io.BytesIO(out["data"]))
     types = {n.split("/")[1] for n in z.namelist() if n.startswith("KNEEBOARD/")}
+    control_types = {f["type"] for f in flights if f.get("flight_role") == "control"}
+    check(len(control_types) == len(rc.RANGE_CONTROL_ROSTER), f"{key}: Range Control flights built")
     for t_id in types:
         guide = [n for n in z.namelist() if f"KNEEBOARD/{t_id}/" in n and "kneeboard_range_" in n]
-        check(len(guide) == len(out["brief"]["range"]) + 1, f"{key}: {t_id} has the Range Guide pages")
+        extra = 1 if t_id in control_types else 0
+        check(len(guide) == len(out["brief"]["range"]) + 1 + extra, f"{key}: {t_id} has the Range Guide pages")
+        check(any("kneeboard_range_control" in n for n in guide) == bool(extra),
+              f"{key}: Range Control page only for Range Control types")
+    control = re.findall(r'"([^"]+ - Range Control)"', config)
+    check(len(control) == len(rc.RANGE_CONTROL_ROSTER), f"{key}: config lists Range Control groups {control}")
+    for g in control:
+        check(f'["name"]="{g}"' in mission, f"{key}: Range Control group {g} in mission")
+    check("reload_countdown = 60" in config and "marker = {" in config, f"{key}: config has reload and marker")
     check([k["label"] for k in out["brief"]["range_kneeboards"]][0] == "Guide", f"{key}: guide labels")
     check(any("JTAC Darknight" in s for s in out["brief"]["support"]), f"{key}: Helicopter-area JTAC")
     check(any(c["name"] == "JTAC2" and c["mhz"] == 267 for f in flights for r in f["radios"]
@@ -109,6 +119,14 @@ tgt = next(w for w in viper["route"] if w["kind"] == "TGT")
 check(tgt["pos"] == areas["sead"], "SEAD flight routes to the SEAD/DEAD area")
 tgt = next(w for w in apache["route"] if w["kind"] == "TGT")
 check(tgt["pos"] == areas["heli"], "helicopter routes to the Helicopter area")
+
+# 4b. Range Control flights fly a plain route (no Range Area), whatever the aircraft.
+out, mission, config = build({"theater": "caucasus", "mission_type": "range", "flights": [
+    {"aircraft": "UH-1H", "slots": 1, "role": "control"}]})
+card = out["brief"]["flights"][0]
+check([w["name"] for w in card["route"]][:3] == ["Join", "Range", "Return"],
+      "Range Control flies a plain route, not to the Helicopter area")
+check(" - Range Control" in mission, "Range Control group name")
 
 # 5. Old "free" setups load as Training Range; dragged areas are honoured.
 req = MissionRequest.from_json({"theater": "caucasus", "mission_type": "free",

@@ -29,6 +29,9 @@ SLOT_RADIUS_M = {"ground": 1500, "heli": 1500, "sea": 4000}
 MIN_SEPARATION_M = 12000
 IDEAL_NM = 50                      # jet areas: aim for 40-60 nm from home
 FLAGS = {"range": 9032, "hook": 9030, "reload": 9031}
+MARKER_LEASH_M = 20 * 1852       # a marker-spawned fighter stays within ~20 nm of its marker
+MARKER_CLEAR_M = 1852            # "clear" removes Marker Spawns within 1 nm
+RELOAD_COUNTDOWN_S = 60
 SUPPORT_RESPAWN_S = 60              # AWACS/tanker replacement after it lands or is lost
 
 
@@ -138,6 +141,8 @@ def flight_route(layout: RangeLayout, role: str, heli: bool):
     """(PlacedArea or None, mission type for task/loadout/route shape) for one player flight.
     Helicopters go to the Helicopter area; others to their Flight Role's area; no role (or
     no such area on this map) means a plain Join -> Range -> Return."""
+    if role == "control":                          # Range Control: free to fly anywhere
+        return None, "range"
     if heli and layout.get("heli"):
         return layout.get("heli"), "cas"
     area = layout.get(rc.ROLE_AREA[role]) if role in rc.ROLE_AREA else None
@@ -330,7 +335,10 @@ class RangeMixin:
             "caps": dict(rc.CAPS), "repeat_delay": rc.REPEAT_DELAY_S,
             "practice_respawn": rc.PRACTICE_RESPAWN_S, "flags": dict(FLAGS),
             "areas": areas, "systems": systems,
-            "range_control": list(getattr(self, "range_control_groups", [])),
+            "range_control": list(self.range_control_groups),
+            "marker": {"leash": MARKER_LEASH_M, "clear_radius": MARKER_CLEAR_M,
+                       "difficulty": "normal"},
+            "reload_countdown": RELOAD_COUNTDOWN_S,
             "support": list(self.support_groups), "support_respawn": SUPPORT_RESPAWN_S,
         }
 

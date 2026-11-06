@@ -45,6 +45,7 @@ jobs:
           luac5.1 -p app/lua/training_range.lua
           for f in /tmp/lua/*range_config.lua; do luac5.1 -p "$f"; done
           lua5.1 tests/lua/test_training_range.lua
+          lua5.1 tests/lua/test_hook.lua && lua5.1 tests/lua/test_hook.lua ""
           lua5.1 tests/lua/test_generated_config.lua /tmp/lua/*range_config.lua
 
   # Windows: tests without Docker, the app build, and its installer (installed, run, uninstalled).

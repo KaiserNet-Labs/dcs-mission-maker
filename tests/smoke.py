@@ -89,6 +89,8 @@ for (ti, tk), (mi, mt), (di, diff) in itertools.product(enumerate(THEATERS), enu
     if t.blue_carrier:
         flights.append({"aircraft": "FA-18C_hornet", "slots": 4, "base": "carrier"})
         n_dtc += 1
+    if mt == "range":     # a Range Admin seat, so the generated-config Lua test tries Marker Spawn
+        flights.append({"aircraft": "UH-1H", "slots": 1, "role": "control"})
     check(f"{tk} {mt} {diff}", {"theater": tk, "mission_type": mt, "difficulty": diff,
                                 "flights": flights, "enemy_air": "heavy", "weather": "rain",
                                 "wind": "strong"}, expect_dtc=n_dtc)
@@ -107,8 +109,10 @@ for ei, ((era, side), ac) in enumerate(reps.items()):
             continue
         check(f"era {era}/{side} {mt}", {"theater": "caucasus", "mission_type": mt,
                                          "difficulty": "hard", "enemy_air": "heavy",
-                                         "flights": [{"aircraft": ac, "slots": 2}]},
-              expect_dtc=1 if ac == "FA-18C_hornet" else 0)
+                                         "flights": [{"aircraft": ac, "slots": 2}]
+                                         + ([{"aircraft": ac, "slots": 1, "role": "control"}]
+                                            if mt == "range" else [])},
+              expect_dtc=(2 if mt == "range" else 1) if ac == "FA-18C_hornet" else 0)
 
 # 3. Every flyable aircraft (air start) builds for every mission type.
 for ai_, ac in enumerate(AIRCRAFT):
