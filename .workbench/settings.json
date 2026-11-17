@@ -1,5 +1,42 @@
 {
   "baseBranch": "main",
-  "contextFiles": ["README.md", "THIRD_PARTY.md"],
-  "notes": "There is no CLAUDE.md; README.md is the project's guide (Security and Development sections). By design: every .env value is optional; without APP_PASSWORD the app is open to anyone who can reach it (meant for a LAN or VPN); with it, sign-up pages, the Briefing Room, mission downloads and the DCS server hook stay open, and their links are hard to guess but not secret. Third-party mission scripts, beacon data and fonts are downloaded by tools/fetch_vendor.py at pinned commits with SHA-256 checks; vendor/ is not in git. The image runs gunicorn as the unprivileged app user after docker-entrypoint.sh fixes volume ownership. The Windows app (windows/, PyInstaller, Inno Setup) is released by .github/workflows/release.yml on v*.*.* tags. Tests: python -m tests.api, python -m tests.smoke --quick (both inside the image), and luac5.1 -p on dcs-hook/ and the dumped mission Lua. On the Box the live app is not reachable; it runs on a separate Live Host."
+  "contextFiles": [
+    "README.md",
+    "THIRD_PARTY.md"
+  ],
+  "notes": "There is no CLAUDE.md; README.md is the project's guide (Security and Development sections). By design: every .env value is optional; without APP_PASSWORD the app is open to anyone who can reach it (meant for a LAN or VPN); with it, sign-up pages, the Briefing Room, mission downloads and the DCS server hook stay open, and their links are hard to guess but not secret. Third-party mission scripts, beacon data and fonts are downloaded by tools/fetch_vendor.py at pinned commits with SHA-256 checks; vendor/ is not in git. The image runs gunicorn as the unprivileged app user after docker-entrypoint.sh fixes volume ownership. The Windows app (windows/, PyInstaller, Inno Setup) is released by .github/workflows/release.yml on v*.*.* tags. Tests: python -m tests.api, python -m tests.smoke --quick (both inside the image), and luac5.1 -p on dcs-hook/ and the dumped mission Lua. On the Box the live app is not reachable; it runs on a separate Live Host. A Release is the image ghcr.io/kaisernet-labs/dcs-mission-maker:<version> (the release key here); release.yml still makes the GitHub release with the Windows app when the v<version> tag is pushed.",
+  "release": {
+    "kind": "image",
+    "image": "ghcr.io/kaisernet-labs/dcs-mission-maker",
+    "source": "https://github.com/KaiserNet-Labs/dcs-mission-maker",
+    "registryUser": "Kaiser-box",
+    "versionFiles": [
+      {
+        "path": "app/__init__.py",
+        "format": "python"
+      },
+      {
+        "path": "pyproject.toml",
+        "format": "pyproject"
+      }
+    ],
+    "tag": "v{version}",
+    "githubRelease": "actions",
+    "tests": [
+      {
+        "name": "API tests",
+        "run": "python -m tests.api"
+      },
+      {
+        "name": "Quick smoke test (dumps the mission Lua)",
+        "run": "mkdir -p /work/lua && python -m tests.smoke --quick --lua-dir /work/lua"
+      },
+      {
+        "name": "Lua 5.1 syntax (hook and mission Lua)",
+        "image": "debian:stable-slim@sha256:fbfb4059d2127120aa05b6e6064523d2102552f0cf0026ddf0701c12f1f8f3e0",
+        "network": true,
+        "run": "apt-get update -qq && apt-get install -y -qq lua5.1 >/dev/null && luac5.1 -v && for f in dcs-hook/*.lua /work/lua/*; do luac5.1 -p \"$f\" || exit 1; done"
+      }
+    ]
+  }
 }
