@@ -311,7 +311,7 @@ docker run --rm -v /tmp/lua:/lua:ro debian:stable-slim sh -c \
 | `app/static/js/common.js` | Helpers shared by the page scripts |
 | `app/static/js/builder.js`, `event.js`, `briefing.js` | Page scripts for the builder, sign-up page and Briefing Room |
 | `app/threatdb.py` | Threat recognition data and dimensions for the Threat ID cards |
-| `app/static/js/blueprint.js` | Blueprint sheets: layout, envelopes, recognition drawings, aircraft two-views |
+| `app/static/js/blueprint.js` | Blueprint sheets: layout, dimensions, envelopes, title block, recognition drawings |
 | `app/static/js/draw3v.js`, `draw3v_units.js`, `draw3v_specs.js` | Generated 3-view line drawings: parts (tracks, wheels, barrels, missiles, radars), vehicle/gun/ship families, and per-unit specs in metres |
 | `app/data/drawings/`, `tools/art_drawings.py`, `art/PROMPTS.md` | Recognition drawings made for the app: the tool cleans images dropped in `art/drawings/` into `app/data/drawings/` and rewrites the prompt list for the units still without one |
 | `tools/fetch_vendor.py` | Downloads the pinned, SHA-256-checked mission scripts, beacon data and fonts into `vendor/` |

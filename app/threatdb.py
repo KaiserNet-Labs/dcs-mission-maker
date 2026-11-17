@@ -1,9 +1,8 @@
 """Threat recognition data for the Briefing Room's blueprint cards.
 
 Figures are approximate public numbers, rounded for briefing use, and roughly
-what DCS models; they are not authoritative. `art` picks the blueprint
-silhouette class drawn by the page. `rwr` is only given where the symbol is
-well established.
+what DCS models; they are not authoritative. `rwr` is only given where the
+symbol is well established.
 """
 import os
 import re
@@ -13,73 +12,73 @@ from . import eras, mods
 # ---------------------------------------------------------------- fighters
 _F = "fighter"
 FIGHTERS = {
-    "Bf-109K-4": dict(title="Bf 109 K-4", role="Axis fighter", art="prop", speed="710 km/h",
+    "Bf-109K-4": dict(title="Bf 109 K-4", role="Axis fighter", speed="710 km/h",
                       arms="1x 30 mm MK 108, 2x 13 mm MG 131",
                       notes="Climbs and accelerates very well. Fight it in the horizontal, not vertical."),
-    "FW-190A8": dict(title="Fw 190 A-8", role="Axis fighter / attack", art="prop", speed="650 km/h",
+    "FW-190A8": dict(title="Fw 190 A-8", role="Axis fighter / attack", speed="650 km/h",
                      arms="4x 20 mm MG 151, 2x 13 mm MG 131",
                      notes="Excellent roll rate and heavy guns. Avoid head-on passes."),
-    "FW-190D9": dict(title="Fw 190 D-9 \"Dora\"", role="Axis fighter", art="prop", speed="685 km/h",
+    "FW-190D9": dict(title="Fw 190 D-9 \"Dora\"", role="Axis fighter", speed="685 km/h",
                      arms="2x 20 mm MG 151, 2x 13 mm MG 131",
                      notes="Fast energy fighter. Keep your speed up and don't get dragged into a dive race."),
-    "P-47D-30": dict(title="P-47D Thunderbolt", role="Allied fighter-bomber", art="prop",
+    "P-47D-30": dict(title="P-47D Thunderbolt", role="Allied fighter-bomber",
                      speed="690 km/h", arms="8x .50 cal M2",
                      notes="Dives faster than anything; heavy. Out-climb it at low altitude."),
-    "P-51D": dict(title="P-51D Mustang", role="Allied fighter", art="prop", speed="700 km/h",
+    "P-51D": dict(title="P-51D Mustang", role="Allied fighter", speed="700 km/h",
                   arms="6x .50 cal M2", notes="Fast, long-legged and good at altitude."),
-    "P-51D-30-NA": dict(title="P-51D Mustang", role="Allied fighter", art="prop", speed="700 km/h",
+    "P-51D-30-NA": dict(title="P-51D Mustang", role="Allied fighter", speed="700 km/h",
                         arms="6x .50 cal M2", notes="Fast, long-legged and good at altitude."),
-    "SpitfireLFMkIX": dict(title="Spitfire LF Mk IX", role="Allied fighter", art="prop",
+    "SpitfireLFMkIX": dict(title="Spitfire LF Mk IX", role="Allied fighter",
                            speed="650 km/h", arms="2x 20 mm Hispano, 4x .303",
                            notes="Out-turns almost everything. Never turn with it; use speed and vertical."),
-    "MiG-15bis": dict(title="MiG-15bis \"Fagot\"", role="Jet fighter", art="early_jet",
+    "MiG-15bis": dict(title="MiG-15bis \"Fagot\"", role="Jet fighter",
                       speed="Mach 0.9", arms="1x 37 mm N-37, 2x 23 mm NR-23",
                       notes="Climbs well; its 37 mm hits hard but fires slowly. Poor handling near Mach."),
-    "F-86F Sabre": dict(title="F-86F Sabre", role="Jet fighter", art="early_jet", speed="Mach 0.9",
+    "F-86F Sabre": dict(title="F-86F Sabre", role="Jet fighter", speed="Mach 0.9",
                         arms="6x .50 cal M3", notes="Good high-speed handling and gunsight."),
-    "MiG-19P": dict(title="MiG-19P \"Farmer\"", role="Interceptor", art="jet", speed="Mach 1.35",
+    "MiG-19P": dict(title="MiG-19P \"Farmer\"", role="Interceptor", speed="Mach 1.35",
                     arms="2x 30 mm NR-30, IR missiles",
                     notes="Fast and powerful but short-legged; short-range IR missiles only."),
-    "MiG-21Bis": dict(title="MiG-21bis \"Fishbed-L\"", role="Fighter", art="delta", speed="Mach 2.0",
+    "MiG-21Bis": dict(title="MiG-21bis \"Fishbed-L\"", role="Fighter", speed="Mach 2.0",
                       arms="23 mm GSh-23, R-60 / R-3 missiles", range="~8 km (IR)",
                       notes="Small and fast; bleeds energy in sustained turns. Mostly a short-range threat."),
-    "MiG-23MLD": dict(title="MiG-23MLD \"Flogger-K\"", role="Fighter", art="jet", speed="Mach 2.3",
+    "MiG-23MLD": dict(title="MiG-23MLD \"Flogger-K\"", role="Fighter", speed="Mach 2.3",
                       arms="R-24R/T radar and IR missiles, R-60, 23 mm", range="~35 km (R-24R)",
                       notes="Fast with a real BVR shot. Poor in a turning fight."),
-    "F-5E-3": dict(title="F-5E Tiger II", role="Light fighter", art="jet", speed="Mach 1.6",
+    "F-5E-3": dict(title="F-5E Tiger II", role="Light fighter", speed="Mach 1.6",
                    arms="2x 20 mm M39, AIM-9", range="~8 km (IR)",
                    notes="Tiny and hard to spot; no BVR missiles. Stay out of its gun and AIM-9 range."),
-    "F-4E-45MC": dict(title="F-4E Phantom II", role="Fighter-bomber", art="jet", speed="Mach 2.2",
+    "F-4E-45MC": dict(title="F-4E Phantom II", role="Fighter-bomber", speed="Mach 2.2",
                       arms="AIM-7 Sparrow, AIM-9, 20 mm M61", range="~25 km (AIM-7)",
                       notes="Semi-active Sparrows: it must keep pointing at you. Doesn't turn well."),
-    "F-14A-135-GR": dict(title="F-14A Tomcat", role="Fleet interceptor", art="swing", speed="Mach 2.3",
+    "F-14A-135-GR": dict(title="F-14A Tomcat", role="Fleet interceptor", speed="Mach 2.3",
                          arms="AIM-54 Phoenix, AIM-7, AIM-9, 20 mm", range="~100 km (AIM-54)",
                          notes="Very long-range Phoenix shots. Notch and go low early."),
-    "F-14B": dict(title="F-14B Tomcat", role="Fleet interceptor", art="swing", speed="Mach 2.3",
+    "F-14B": dict(title="F-14B Tomcat", role="Fleet interceptor", speed="Mach 2.3",
                   arms="AIM-54 Phoenix, AIM-7, AIM-9, 20 mm", range="~100 km (AIM-54)",
                   notes="Very long-range Phoenix shots. Notch and go low early."),
-    "MiG-29A": dict(title="MiG-29A \"Fulcrum-A\"", role="Air superiority", art="twin", speed="Mach 2.25",
+    "MiG-29A": dict(title="MiG-29A \"Fulcrum-A\"", role="Air superiority", speed="Mach 2.25",
                     arms="R-27R, R-73 (helmet-cued), 30 mm", range="~40 km (R-27R)",
                     notes="Superb up close with the R-73; can find you silently with its IRST. Don't merge."),
-    "MiG-29S": dict(title="MiG-29S \"Fulcrum-C\"", role="Air superiority", art="twin", speed="Mach 2.25",
+    "MiG-29S": dict(title="MiG-29S \"Fulcrum-C\"", role="Air superiority", speed="Mach 2.25",
                     arms="R-77 active radar, R-27, R-73, 30 mm", range="~50 km (R-77)",
                     notes="Fire-and-forget R-77s. Respect its BVR shot and its R-73 up close."),
-    "Su-27": dict(title="Su-27 \"Flanker-B\"", role="Air superiority", art="twin", speed="Mach 2.35",
+    "Su-27": dict(title="Su-27 \"Flanker-B\"", role="Air superiority", speed="Mach 2.35",
                   arms="R-27ER/ET, R-73, 30 mm", range="~60 km (R-27ER)",
                   notes="Long-range R-27ERs and lots of fuel and missiles. Its IR R-27ET gives no RWR warning."),
-    "Su-30": dict(title="Su-30 \"Flanker-C\"", role="Multirole air superiority", art="twin",
+    "Su-30": dict(title="Su-30 \"Flanker-C\"", role="Multirole air superiority",
                   speed="Mach 2.0", arms="R-77, R-27ER, R-73, 30 mm", range="~60 km",
                   notes="The most dangerous fighter here: active R-77s plus long-range R-27ERs."),
-    "F-15C": dict(title="F-15C Eagle", role="Air superiority", art="twin", speed="Mach 2.5",
+    "F-15C": dict(title="F-15C Eagle", role="Air superiority", speed="Mach 2.5",
                   arms="AIM-120 / AIM-7, AIM-9, 20 mm", range="~50 km (AIM-120)",
                   notes="Excellent radar and long-range AMRAAMs. Use terrain and notch."),
-    "F-16A": dict(title="F-16A Fighting Falcon", role="Multirole fighter", art="jet", speed="Mach 2.0",
+    "F-16A": dict(title="F-16A Fighting Falcon", role="Multirole fighter", speed="Mach 2.0",
                   arms="AIM-9, 20 mm M61", range="~10 km (IR)",
                   notes="Very agile. The early F-16A is mainly a within-visual-range threat."),
-    "F-16C_50": dict(title="F-16C Viper", role="Multirole fighter", art="jet", speed="Mach 2.0",
+    "F-16C_50": dict(title="F-16C Viper", role="Multirole fighter", speed="Mach 2.0",
                      arms="AIM-120C, AIM-9X, 20 mm M61", range="~50 km (AIM-120C)",
                      notes="Active AMRAAMs and a helmet-cued AIM-9X. Very agile."),
-    "FA-18C_hornet": dict(title="F/A-18C Hornet", role="Multirole fighter", art="twin", speed="Mach 1.8",
+    "FA-18C_hornet": dict(title="F/A-18C Hornet", role="Multirole fighter", speed="Mach 1.8",
                           arms="AIM-120C, AIM-9X, 20 mm M61", range="~50 km (AIM-120C)",
                           notes="Great nose authority at slow speed; don't get into a slow knife fight."),
 }
@@ -87,130 +86,130 @@ FIGHTERS = {
 # --------------------------------------------------------------- SAM systems
 SAM_SYSTEMS = {
     "SA-2 Guideline": dict(title="SA-2 \"Guideline\"", nato="S-75 Dvina", role="Medium/high-altitude SAM",
-                           art="sam_big", range="~45 km", alt="~25,000 m", guidance="Radio command (Fan Song radar)",
+                           range="~45 km", alt="~25,000 m", guidance="Radio command (Fan Song radar)",
                            rwr="2", notes="Huge, smoky missile you can often see. Beam it, chaff, and break hard late. "
                                           "Kill the Fan Song radar and the site is blind."),
-    "SA-3 Goa": dict(title="SA-3 \"Goa\"", nato="S-125 Neva", role="Low/medium-altitude SAM", art="sam",
+    "SA-3 Goa": dict(title="SA-3 \"Goa\"", nato="S-125 Neva", role="Low/medium-altitude SAM",
                      range="~25 km", alt="~18,000 m (low as 20 m)", guidance="Radio command (Low Blow radar)",
                      rwr="3", notes="Designed to catch low flyers. Kill the Low Blow tracking radar."),
     "SA-6 Gainful": dict(title="SA-6 \"Gainful\"", nato="2K12 Kub", role="Mobile medium-range SAM",
-                         art="sam", range="~25 km", alt="~14,000 m", guidance="Semi-active radar",
+                         range="~25 km", alt="~14,000 m", guidance="Semi-active radar",
                          rwr="6", notes="One Straight Flush radar guides the whole battery: kill it and the "
                                         "launchers can't shoot. Missile is fast and agile; beam and chaff."),
     "SA-11 Gadfly": dict(title="SA-11 \"Gadfly\"", nato="9K37 Buk", role="Mobile medium-range SAM",
-                         art="sam", range="~35 km", alt="~22,000 m", guidance="Semi-active radar",
+                         range="~35 km", alt="~22,000 m", guidance="Semi-active radar",
                          rwr="11", notes="Every launcher has its own radar, so killing the search radar "
                                          "doesn't silence it. Hunt the launchers with stand-off weapons."),
     "SA-10 Grumble": dict(title="SA-10 \"Grumble\"", nato="S-300PS", role="Long-range strategic SAM",
-                          art="sam_big", range="~75 km", alt="~27,000 m", guidance="Track-via-missile",
+                          range="~75 km", alt="~27,000 m", guidance="Track-via-missile",
                           rwr="10", notes="Deadly at long range. Stay low and behind terrain; attack with "
                                           "HARMs or stand-off weapons from outside its envelope."),
     "SA-20 Gargoyle": dict(title="SA-20 \"Gargoyle\"", nato="S-300PMU1 (mod)", role="Long-range SAM",
-                           art="sam_big", range="~150 km", alt="~27,000 m", guidance="Track-via-missile",
+                           range="~150 km", alt="~27,000 m", guidance="Track-via-missile",
                            notes="Huge envelope. Treat its area as no-go above the terrain."),
     "SA-20B Gargoyle": dict(title="SA-20B \"Gargoyle\"", nato="S-300PMU2 (mod)", role="Long-range SAM",
-                            art="sam_big", range="~200 km", alt="~27,000 m", guidance="Track-via-missile",
+                            range="~200 km", alt="~27,000 m", guidance="Track-via-missile",
                             notes="Huge envelope. Treat its area as no-go above the terrain."),
-    "MIM-23 Hawk": dict(title="MIM-23 Hawk", nato="Hawk", role="Medium-range SAM", art="sam",
+    "MIM-23 Hawk": dict(title="MIM-23 Hawk", nato="Hawk", role="Medium-range SAM",
                         range="~40 km", alt="~14,000 m", guidance="Semi-active radar (CW)", rwr="HA",
                         notes="Kill the tracking radar and the launchers are useless. Beam and chaff."),
-    "MIM-104 Patriot": dict(title="MIM-104 Patriot", nato="Patriot", role="Long-range SAM", art="sam_big",
+    "MIM-104 Patriot": dict(title="MIM-104 Patriot", nato="Patriot", role="Long-range SAM",
                             range="~70 km+", alt="~24,000 m", guidance="Track-via-missile", rwr="P",
                             notes="Long range and very capable. Fly low behind terrain; use stand-off weapons."),
-    "NASAMS": dict(title="NASAMS", nato="NASAMS", role="Medium-range SAM", art="sam",
+    "NASAMS": dict(title="NASAMS", nato="NASAMS", role="Medium-range SAM",
                    range="~25 km", alt="~15,000 m", guidance="Active radar (AIM-120)",
                    notes="Fires AMRAAMs from the ground: missiles go active, so notch and defend early."),
     "88mm Flak battery": dict(title="8.8 cm Flak battery", nato="Flak 36 + Freya radar", role="Heavy AAA",
-                              art="flak", range="~10 km", alt="~8,000 m", guidance="Radar/optical director",
+                              range="~10 km", alt="~8,000 m", guidance="Radar/optical director",
                               notes="Bursts at your altitude. Change height and heading often and don't fly "
                                     "straight and level near it."),
     "Heavy Flak battery": dict(title="Heavy Flak battery", nato="Flak 36/41 + 20 mm", role="Heavy and light AAA",
-                               art="flak", range="~10 km", alt="~10,000 m", guidance="Radar/optical director",
+                               range="~10 km", alt="~10,000 m", guidance="Radar/optical director",
                                notes="88s up high, quad 20 mm down low. Jink, and come in fast and low."),
     "3.7-inch AA battery": dict(title="QF 3.7-inch AA battery", nato="3.7-inch AA", role="Heavy AAA",
-                                art="flak", range="~9 km", alt="~9,000 m", guidance="Predictor director",
+                                range="~9 km", alt="~9,000 m", guidance="Predictor director",
                                 notes="Accurate at altitude. Change height and heading often."),
     "Heavy AA battery": dict(title="Heavy AA battery", nato="3.7-inch + Bofors", role="Heavy and light AAA",
-                             art="flak", range="~9 km", alt="~9,000 m", guidance="Predictor director",
+                             range="~9 km", alt="~9,000 m", guidance="Predictor director",
                              notes="Heavy guns up high, Bofors and .50s down low."),
     "Radar-directed AAA": dict(title="Radar-directed AAA", nato="KS-19 + Fire Can", role="Heavy AAA",
-                               art="flak", range="~12 km", alt="~12,000 m", guidance="Fire Can radar",
+                               range="~12 km", alt="~12,000 m", guidance="Fire Can radar",
                                notes="Kill the Fire Can radar and the guns lose accuracy."),
 }
 
 # ------------------------------------------------------- short-range / guns
 SHORT = {
-    "flak38": dict(title="Flakvierling 38", role="Quad 20 mm AAA", art="aaa", range="~2 km", alt="~2,000 m",
+    "flak38": dict(title="Flakvierling 38", role="Quad 20 mm AAA", range="~2 km", alt="~2,000 m",
                    guidance="Optical", notes="Deadly down low. Stay above 2,000 m or out of range."),
-    "flak36": dict(title="8.8 cm Flak 36", role="Heavy AAA", art="flak", range="~10 km", alt="~8,000 m",
+    "flak36": dict(title="8.8 cm Flak 36", role="Heavy AAA", range="~10 km", alt="~8,000 m",
                    guidance="Optical/director", notes="Don't fly straight and level near it."),
-    "flak41": dict(title="8.8 cm Flak 41", role="Heavy AAA", art="flak", range="~12 km", alt="~10,000 m",
+    "flak41": dict(title="8.8 cm Flak 41", role="Heavy AAA", range="~12 km", alt="~10,000 m",
                    guidance="Optical/director", notes="Higher-reaching 88. Jink."),
-    "M45_Quadmount": dict(title="M45 Quadmount", role="Quad .50 cal AAA", art="aaa", range="~1.5 km",
+    "M45_Quadmount": dict(title="M45 Quadmount", role="Quad .50 cal AAA", range="~1.5 km",
                           alt="~1,500 m", guidance="Optical", notes="Low-level only. Stay above it."),
-    "bofors40": dict(title="Bofors 40 mm", role="Light AAA", art="aaa", range="~3 km", alt="~3,000 m",
+    "bofors40": dict(title="Bofors 40 mm", role="Light AAA", range="~3 km", alt="~3,000 m",
                      guidance="Optical", notes="Dangerous on low strafing runs."),
-    "QF_37_AA": dict(title="QF 3.7-inch", role="Heavy AAA", art="flak", range="~9 km", alt="~9,000 m",
+    "QF_37_AA": dict(title="QF 3.7-inch", role="Heavy AAA", range="~9 km", alt="~9,000 m",
                      guidance="Director", notes="Change height and heading often."),
-    "ZU-23 Emplacement": dict(title="ZU-23-2", role="Twin 23 mm AAA", art="aaa", range="~2.5 km",
+    "ZU-23 Emplacement": dict(title="ZU-23-2", role="Twin 23 mm AAA", range="~2.5 km",
                               alt="~1,500 m", guidance="Optical", notes="Stay above 2,000 m or out of range."),
-    "S-60_Type59_Artillery": dict(title="S-60 57 mm", role="AAA", art="aaa", range="~4 km", alt="~4,000 m",
+    "S-60_Type59_Artillery": dict(title="S-60 57 mm", role="AAA", range="~4 km", alt="~4,000 m",
                                   guidance="Optical / radar", notes="Reaches higher than light AAA."),
-    "KS-19": dict(title="KS-19 100 mm", role="Heavy AAA", art="flak", range="~12 km", alt="~12,000 m",
+    "KS-19": dict(title="KS-19 100 mm", role="Heavy AAA", range="~12 km", alt="~12,000 m",
                   guidance="Fire Can radar", notes="Kill the Fire Can radar."),
-    "ZSU-23-4 Shilka": dict(title="ZSU-23-4 Shilka", role="Radar-guided SPAAG", art="spaag",
+    "ZSU-23-4 Shilka": dict(title="ZSU-23-4 Shilka", role="Radar-guided SPAAG",
                             range="~2.5 km", alt="~1,500 m", guidance="Gun Dish radar", rwr="A",
                             notes="Very accurate quad 23 mm. Stay above 3,000 m or beyond 3 km."),
-    "ZSU_57_2": dict(title="ZSU-57-2", role="SPAAG", art="spaag", range="~4 km", alt="~4,000 m",
+    "ZSU_57_2": dict(title="ZSU-57-2", role="SPAAG", range="~4 km", alt="~4,000 m",
                      guidance="Optical", notes="Optical only; don't loiter low."),
-    "Strela-1 9P31": dict(title="SA-9 \"Gaskin\"", role="IR SAM vehicle", art="ir_sam", range="~4 km",
+    "Strela-1 9P31": dict(title="SA-9 \"Gaskin\"", role="IR SAM vehicle", range="~4 km",
                           alt="~3,500 m", guidance="Infrared", notes="No radar warning. Flares, and stay high."),
-    "Strela-10M3": dict(title="SA-13 \"Gopher\"", role="IR SAM vehicle", art="ir_sam", range="~5 km",
+    "Strela-10M3": dict(title="SA-13 \"Gopher\"", role="IR SAM vehicle", range="~5 km",
                         alt="~3,500 m", guidance="Infrared", notes="No radar warning. Flares, and stay high."),
-    "Osa 9A33 ln": dict(title="SA-8 \"Gecko\"", role="Mobile radar SAM", art="ir_sam", range="~10 km",
+    "Osa 9A33 ln": dict(title="SA-8 \"Gecko\"", role="Mobile radar SAM", range="~10 km",
                         alt="~5,000 m", guidance="Radio command, own radar", rwr="8",
                         notes="Self-contained, so every vehicle can shoot. Chaff and beam it."),
-    "2S6 Tunguska": dict(title="SA-19 \"Grison\" (2S6 Tunguska)", role="Gun/missile SPAAG", art="spaag",
+    "2S6 Tunguska": dict(title="SA-19 \"Grison\" (2S6 Tunguska)", role="Gun/missile SPAAG",
                          range="~8 km", alt="~3,500 m", guidance="Radar + optical", rwr="19",
                          notes="Guns and missiles. Stay above 4,000 m or use stand-off weapons."),
-    "Tor 9A331": dict(title="SA-15 \"Gauntlet\" (Tor)", role="Short-range SAM", art="ir_sam",
+    "Tor 9A331": dict(title="SA-15 \"Gauntlet\" (Tor)", role="Short-range SAM",
                       range="~12 km", alt="~6,000 m", guidance="Radio command, own radar", rwr="15",
                       notes="Can shoot down incoming bombs and HARMs. Saturate it or use guided weapons "
                             "from outside 12 km."),
-    "Vulcan": dict(title="M163 Vulcan", role="20 mm SPAAG", art="spaag", range="~1.5 km", alt="~1,200 m",
+    "Vulcan": dict(title="M163 Vulcan", role="20 mm SPAAG", range="~1.5 km", alt="~1,200 m",
                    guidance="Range-only radar", notes="Low-level threat only."),
-    "M48 Chaparral": dict(title="M48 Chaparral", role="IR SAM vehicle", art="ir_sam", range="~5 km",
+    "M48 Chaparral": dict(title="M48 Chaparral", role="IR SAM vehicle", range="~5 km",
                           alt="~3,000 m", guidance="Infrared (Sidewinder)", notes="No radar warning. Flares."),
-    "Gepard": dict(title="Gepard", role="35 mm radar SPAAG", art="spaag", range="~4 km", alt="~3,000 m",
+    "Gepard": dict(title="Gepard", role="35 mm radar SPAAG", range="~4 km", alt="~3,000 m",
                    guidance="Search + track radar", notes="Very accurate. Stay above 4,000 m."),
-    "Roland ADS": dict(title="Roland", role="Short-range SAM", art="ir_sam", range="~8 km", alt="~5,500 m",
+    "Roland ADS": dict(title="Roland", role="Short-range SAM", range="~8 km", alt="~5,500 m",
                        guidance="Radar / optical command", notes="Chaff, beam, or stay above 6,000 m."),
-    "M1097 Avenger": dict(title="Avenger", role="Stinger SAM vehicle", art="ir_sam", range="~4.5 km",
+    "M1097 Avenger": dict(title="Avenger", role="Stinger SAM vehicle", range="~4.5 km",
                           alt="~3,800 m", guidance="Infrared", notes="No radar warning. Flares, stay high."),
-    "M6 Linebacker": dict(title="M6 Linebacker", role="Stinger + 25 mm", art="ir_sam", range="~4.5 km",
+    "M6 Linebacker": dict(title="M6 Linebacker", role="Stinger + 25 mm", range="~4.5 km",
                           alt="~3,800 m", guidance="Infrared", notes="No radar warning. Flares, stay high."),
-    "SA-18 Igla manpad": dict(title="SA-18 \"Grouse\" (Igla)", role="MANPADS", art="manpads",
+    "SA-18 Igla manpad": dict(title="SA-18 \"Grouse\" (Igla)", role="MANPADS",
                               range="~5 km", alt="~3,500 m", guidance="Infrared",
                               notes="Invisible until launch. Pre-emptive flares on low passes; stay high."),
-    "SA-18 Igla-S manpad": dict(title="SA-24 \"Grinch\" (Igla-S)", role="MANPADS", art="manpads",
+    "SA-18 Igla-S manpad": dict(title="SA-24 \"Grinch\" (Igla-S)", role="MANPADS",
                                 range="~6 km", alt="~3,500 m", guidance="Infrared",
                                 notes="Invisible until launch. Pre-emptive flares on low passes; stay high."),
-    "Soldier stinger": dict(title="FIM-92 Stinger", role="MANPADS", art="manpads", range="~4.5 km",
+    "Soldier stinger": dict(title="FIM-92 Stinger", role="MANPADS", range="~4.5 km",
                             alt="~3,800 m", guidance="Infrared",
                             notes="Invisible until launch. Pre-emptive flares on low passes; stay high."),
 }
 
 # ------------------------------------------------------------- EW radars
 EWR = {
-    "p-19 s-125 sr": dict(title="P-19 \"Flat Face\"", role="Search radar", art="radar", range="~150 km",
+    "p-19 s-125 sr": dict(title="P-19 \"Flat Face\"", role="Search radar", range="~150 km",
                           notes="No weapons, but it cues SAMs and fighters onto you."),
-    "1L13 EWR": dict(title="1L13 \"Box Spring\"", role="Early-warning radar", art="radar", range="~300 km",
+    "1L13 EWR": dict(title="1L13 \"Box Spring\"", role="Early-warning radar", range="~300 km",
                      notes="No weapons, but it cues SAMs and fighters onto you."),
-    "55G6 EWR": dict(title="55G6 \"Tall Rack\"", role="Early-warning radar", art="radar", range="~400 km",
+    "55G6 EWR": dict(title="55G6 \"Tall Rack\"", role="Early-warning radar", range="~400 km",
                      notes="No weapons, but it cues SAMs and fighters onto you."),
-    "FuMG-401": dict(title="FuMG 401 \"Freya\"", role="Early-warning radar", art="radar",
+    "FuMG-401": dict(title="FuMG 401 \"Freya\"", role="Early-warning radar",
                      range="~150 km", notes="No weapons, but it warns flak and fighters you're coming."),
-    "FPS-117": dict(title="AN/FPS-117", role="Early-warning radar", art="radar", range="~400 km",
+    "FPS-117": dict(title="AN/FPS-117", role="Early-warning radar", range="~400 km",
                     notes="No weapons, but it cues SAMs and fighters onto you."),
 }
 
@@ -219,7 +218,7 @@ def _tank(title, gun, atgm=None, era=""):
     notes = "Main gun and a heavy MG for low aircraft."
     if atgm:
         notes += f" Can fire {atgm} through the gun: a real threat to hovering helicopters."
-    return dict(title=title, role=f"Main battle tank{era}", art="tank", arms=gun, notes=notes)
+    return dict(title=title, role=f"Main battle tank{era}", arms=gun, notes=notes)
 
 
 ARMOR = {
@@ -232,7 +231,7 @@ ARMOR = {
     "M4A4_Sherman_FF": _tank("Sherman Firefly", "17-pounder"),
     "Churchill_VII": _tank("Churchill VII", "75 mm OQF"),
     "T-34-85": _tank("T-34-85", "85 mm ZiS-S-53"),
-    "PT_76": dict(title="PT-76", role="Light amphibious tank", art="tank", arms="76 mm D-56T",
+    "PT_76": dict(title="PT-76", role="Light amphibious tank", arms="76 mm D-56T",
                   notes="Light armor; easy kill."),
     "T-55": _tank("T-55", "100 mm D-10T"),
     "T62M": _tank("T-62M", "115 mm U-5TS", atgm="9M117 Bastion (~4 km)"),
@@ -247,38 +246,38 @@ ARMOR = {
     "leopard-2A4": _tank("Leopard 2A4", "120 mm Rh-120"),
     "Leopard-2A5": _tank("Leopard 2A5", "120 mm Rh-120"),
     "M1A2C_SEP_V3": _tank("M1A2C SEP v3 Abrams", "120 mm M256"),
-    "Sd_Kfz_251": dict(title="Sd.Kfz. 251", role="Halftrack APC", art="apc", arms="MG 42",
+    "Sd_Kfz_251": dict(title="Sd.Kfz. 251", role="Halftrack APC", arms="MG 42",
                        notes="Light armor and an MG; dangerous only to low strafing passes."),
-    "M2A1_halftrack": dict(title="M2A1 Halftrack", role="Halftrack APC", art="apc", arms=".50 cal",
+    "M2A1_halftrack": dict(title="M2A1 Halftrack", role="Halftrack APC", arms=".50 cal",
                            notes="The .50 cal can hurt low aircraft."),
-    "BTR-60": dict(title="BTR-60", role="APC", art="apc", arms="14.5 mm KPVT",
+    "BTR-60": dict(title="BTR-60", role="APC", arms="14.5 mm KPVT",
                    notes="Its 14.5 mm can hit low helicopters."),
-    "M-113": dict(title="M113", role="APC", art="apc", arms=".50 cal", notes="Light threat to helicopters."),
-    "BMP-2": dict(title="BMP-2", role="Infantry fighting vehicle", art="apc", arms="30 mm 2A42, 9M113 ATGM",
+    "M-113": dict(title="M113", role="APC", arms=".50 cal", notes="Light threat to helicopters."),
+    "BMP-2": dict(title="BMP-2", role="Infantry fighting vehicle", arms="30 mm 2A42, 9M113 ATGM",
                   notes="The 30 mm cannon elevates high: a real threat to helicopters below 2 km."),
-    "M-2 Bradley": dict(title="M2 Bradley", role="Infantry fighting vehicle", art="apc",
+    "M-2 Bradley": dict(title="M2 Bradley", role="Infantry fighting vehicle",
                         arms="25 mm M242, TOW", notes="The 25 mm is a threat to low helicopters."),
-    "BMP-3": dict(title="BMP-3", role="Infantry fighting vehicle", art="apc", arms="100 mm + 30 mm, ATGM",
+    "BMP-3": dict(title="BMP-3", role="Infantry fighting vehicle", arms="100 mm + 30 mm, ATGM",
                   notes="The 30 mm cannon is a threat to helicopters."),
 }
 
 
-def _ship(title, role, sam=None, guns="", art="ship"):
-    return dict(title=title, role=role, art=art, arms=", ".join(x for x in (sam, guns) if x),
+def _ship(title, role, sam=None, guns=""):
+    return dict(title=title, role=role, arms=", ".join(x for x in (sam, guns) if x),
                 notes=("Ship-launched SAMs: " + sam + ". Attack from outside that range."
                        if sam else "Guns only. Watch the AAA on low passes."))
 
 
 SHIPS = {
-    "Schnellboot_type_S130": _ship("S-boat (S-130)", "Fast attack craft", guns="20/37 mm flak", art="boat"),
-    "Uboat_VIIC": _ship("U-boat Type VIIC", "Submarine (surfaced)", guns="20 mm flak", art="boat"),
+    "Schnellboot_type_S130": _ship("S-boat (S-130)", "Fast attack craft", guns="20/37 mm flak"),
+    "Uboat_VIIC": _ship("U-boat Type VIIC", "Submarine (surfaced)", guns="20 mm flak"),
     "LST_Mk2": _ship("LST Mk.II", "Landing ship", guns="40 mm / 20 mm AA"),
     "USS_Samuel_Chase": _ship("USS Samuel Chase", "Attack transport", guns="5-inch, 40 mm, 20 mm AA"),
     "Dry-cargo ship-1": _ship("Cargo ship", "Merchant", guns=""),
     "Dry-cargo ship-2": _ship("Cargo ship", "Merchant", guns=""),
     "ALBATROS": _ship("Grisha corvette", "ASW corvette", sam="SA-N-4 Gecko (~10 km)", guns="57 mm, 30 mm"),
     "MOLNIYA": _ship("Molniya corvette", "Missile corvette", sam="SA-N-5 MANPADS (~5 km)",
-                     guns="76 mm, 30 mm CIWS", art="boat"),
+                     guns="76 mm, 30 mm CIWS"),
     "REZKY": _ship("Krivak frigate", "ASW frigate", sam="SA-N-4 Gecko (~10 km)", guns="76 mm"),
     "NEUSTRASH": _ship("Neustrashimy frigate", "Frigate", sam="SA-N-9 Gauntlet (~12 km)",
                        guns="100 mm, CIWS"),
@@ -294,9 +293,9 @@ SHIPS = {
                                    guns="5-inch, Phalanx"),
 }
 
-ARTILLERY = {t.id: dict(title=getattr(t, "name", t.id), role="Artillery", art="artillery",
+ARTILLERY = {t.id: dict(title=getattr(t, "name", t.id), role="Artillery",
                         notes="No threat to aircraft; a ground target.")
-             for t in {f["artillery"] for f in eras.FORCES.values()}}
+             for t in sorted({f["artillery"] for f in eras.FORCES.values()}, key=lambda t: t.id)}
 
 ENTRIES = {}
 for _cat, _table in (("fighter", FIGHTERS), ("sam", SAM_SYSTEMS), ("short", SHORT), ("ewr", EWR),
@@ -396,20 +395,6 @@ DIMS = {
     "TICONDEROG": (173, 16.8, None, True), "USS_Arleigh_Burke_IIa": (155, 20, None, True),
 }
 
-# Finer drawing styles than the card class, so a Su-27 and an F-16 don't look alike.
-STYLE = {
-    "MiG-21Bis": "delta", "MiG-23MLD": "swing", "F-14A-135-GR": "tomcat", "F-14B": "tomcat",
-    "F-5E-3": "light", "F-16A": "viper", "F-16C_50": "viper", "F-4E-45MC": "phantom",
-    "MiG-15bis": "early_jet", "F-86F Sabre": "early_jet", "MiG-19P": "early_jet",
-    "MiG-29A": "flanker", "MiG-29S": "flanker", "Su-27": "flanker", "Su-30": "flanker",
-    "F-15C": "eagle", "FA-18C_hornet": "hornet",
-    "SA-2 Guideline": "rail", "SA-3 Goa": "rail", "MIM-23 Hawk": "rail",
-    "SA-10 Grumble": "canister", "SA-20 Gargoyle": "canister", "SA-20B Gargoyle": "canister",
-    "MIM-104 Patriot": "canister", "NASAMS": "canister",
-    "Osa 9A33 ln": "wheeled_sam", "Strela-1 9P31": "wheeled_sam", "M1097 Avenger": "wheeled_sam",
-    "BTR-60": "wheeled_apc", "Tor 9A331": "tor",
-}
-
 
 def _base_card(key):
     e = ENTRIES.get(key)
@@ -419,7 +404,6 @@ def _base_card(key):
     if key in DIMS:
         length, span, height, approx = DIMS[key]
         out["dims"] = {"length": length, "span": span, "height": height, "approx": approx}
-    out["style"] = STYLE.get(key, e.get("art"))
     return out
 
 
@@ -460,7 +444,7 @@ DRAWINGS = load_drawings()
 
 
 def card(key):
-    """Threat-ID card for a key: data, dimensions, drawing style and its drawing if any."""
+    """Threat-ID card for a key: data, dimensions and its drawing if any."""
     out = _base_card(key)
     if out:
         src = key if key in DRAWINGS else DRAWING_ALIAS.get(key)

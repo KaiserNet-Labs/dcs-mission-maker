@@ -13,6 +13,7 @@ Units without a drawing there use the generated line drawing.
 """
 import difflib
 import os
+import re
 import sys
 
 from PIL import Image, ImageOps
@@ -764,7 +765,18 @@ UNITS = {
 }
 
 
+def unused_specs():
+    """Units whose generated line drawing (draw3v_specs.js) a drawing now replaces."""
+    with open(os.path.join(ROOT, "app", "static", "js", "draw3v_specs.js"), encoding="utf-8") as fh:
+        text = fh.read()
+    return [k for k in threatdb.ENTRIES if "drawing" in threatdb.card(k)
+            and (f'"{k}":' in text or re.search(rf"^\s+{re.escape(k)}:", text, re.M))]
+
+
 if __name__ == "__main__":
     clean_all()
     threatdb.DRAWINGS = threatdb.load_drawings()
     write_prompts()
+    if spare := unused_specs():
+        print("These now have a drawing, so their specs in app/static/js/draw3v_specs.js can go: "
+              + ", ".join(spare))

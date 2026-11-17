@@ -6,6 +6,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import sys
 import tempfile
 import threading
@@ -594,6 +595,13 @@ ok("drawing" not in threatdb.card(undrawn), "no drawing: generated line drawing"
 ok(c.get("/drawings/..%2Fthreatdb.py").status_code == 404, "drawing path checked")
 ok(set(os.listdir(threatdb.DRAWINGS_DIR)) <= {threatdb.drawing_name(k) for k in threatdb.ENTRIES},
    "every drawing file belongs to a unit")
+# Every unit shows something: its drawing, a look-alike's, or a generated line drawing. Keys
+# of the generated specs (draw3v_specs.js) are its quoted or bare object keys; stray option
+# names caught along the way don't matter, they're never unit keys.
+specs_js = pathlib.Path("app/static/js/draw3v_specs.js").read_text(encoding="utf-8")
+generated = {a or b for a, b in re.findall(r'"([^"]+)":|\b([A-Za-z_]\w*):', specs_js)}
+blank = [k for k in threatdb.ENTRIES if "drawing" not in threatdb.card(k) and k not in generated]
+ok(not blank, f"units with neither a drawing nor a generated one: {blank}")
 
 print(f"api checks done, {len(fails)} failures")
 sys.exit(1 if fails else 0)

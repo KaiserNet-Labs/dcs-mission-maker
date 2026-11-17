@@ -177,7 +177,7 @@
   }
 
   global.Draw3VParts = {
-    poly, line, seg, circ, rect, path, grp, rot, range, wheel, sprocket, trackSide, wheelsSide, trackTop, trackFront,
+    poly, line, seg, circ, rect, path, grp, rot, range, wheel, trackSide, wheelsSide, trackTop, trackFront,
     barrel, muzzle, cupola, eraRows, smokeLaunchers, antenna, grille, box, drum, hatchTop, light, missile, canister, dish, arrayPanel,
   };
 })(window);

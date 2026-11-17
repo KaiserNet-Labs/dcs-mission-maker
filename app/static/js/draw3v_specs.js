@@ -103,36 +103,10 @@
       turret: { x: 3.2, len: 3.2, w: 2.9, h: 1.0, shape: "cast", bustle: 0.65, cupolaR: 0.45, cupolaH: 0.38, cupolaX: 3.6, smoke: true }, gun: { len: 5.5, d: 0.16, evac: 0.55 } }),
     "M-1 Abrams": () => F.armour({ hullL: 7.92, W: 3.66, hullH: 1.45, glacis: 1.4, track: { n: 7, r: 0.32, returns: 2, sprocket: "rear", style: "rubber", skirt: "panel", skirtTop: 1.25 }, trackW: 0.64, exhaust: true,
       turret: { x: 3.25, len: 4.0, w: 3.5, h: 0.85, shape: "slab", bustle: 0.9, cupolaR: 0.35, cupolaH: 0.25, cupolaX: 4.0, smoke: true, antenna: true }, gun: { len: 5.3, d: 0.19, evac: 0.45, mrs: true } }),
-    // Fallbacks for units that normally use a real drawing (fetched at build, may be missing)
-    "T-72B": () => t72({}), "T-72B3": () => t72({ era: true }), "T-90": () => t72({ era: true, shtora: true, W: 3.78 }),
-    "T-80B": () => t80({}), "T-80UD": () => t80({ era: true }),
-    PT_76: () => F.armour({ hullL: 7.63, W: 3.14, hullH: 1.65, glacis: 1.6, track: { n: 6, r: 0.35, sprocket: "rear", style: "spoked" }, trackW: 0.36,
-      hullPts: [[0, 0.7], [-0.15, 1.1], [1.6, 1.65], [7.5, 1.65], [7.63, 1.3], [7.63, 0.6]],
-      turret: { x: 2.6, len: 2.2, w: 2.1, h: 0.6, shape: "cast", cupolaR: 0.25, cupolaH: 0.15 }, gun: { len: 3.6, d: 0.1, brake: true, evac: 0.6 } }),
-    Leopard1A3: () => F.armour({ hullL: 7.09, W: 3.37, hullH: 1.6, glacis: 1.1, track: { n: 7, r: 0.35, returns: 4, sprocket: "rear", style: "rubber", skirt: "rubber", skirtTop: 1.15 }, trackW: 0.55, exhaust: true,
-      turret: { x: 3.0, len: 3.2, w: 2.8, h: 0.95, shape: "slab", bustle: 0.6, cupolaR: 0.35, cupolaX: 3.5, smoke: true }, gun: { len: 5.5, d: 0.16, evac: 0.45, sleeve: [0.2, 0.6] } }),
-    "leopard-2A4": () => leo2(false), "Leopard-2A5": () => leo2(true),
-    "BMP-3": () => F.armour({ hullL: 7.14, W: 3.3, hullH: 1.65, glacis: 1.6, ribbedGlacis: true, track: { n: 6, r: 0.33, returns: 3, sprocket: "rear", style: "steel" }, trackW: 0.45,
-      turret: { x: 3.4, len: 2.1, w: 2.1, h: 0.6, shape: "ifv", cupola: false }, gun: { len: 3.4, d: 0.17, elev: 2, sleeve: [0.5] } }),
     M1A2C_SEP_V3: () => add(F.armour({ hullL: 7.92, W: 3.66, hullH: 1.45, glacis: 1.4, track: { n: 7, r: 0.32, returns: 2, sprocket: "rear", style: "rubber", skirt: "panel", skirtTop: 1.25 }, trackW: 0.64, exhaust: true,
       turret: { x: 3.25, len: 4.0, w: 3.5, h: 0.85, shape: "slab", bustle: 0.9, cupolaR: 0.35, cupolaH: 0.25, cupolaX: 4.0, smoke: true, antenna: true }, gun: { len: 5.3, d: 0.19, evac: 0.45, mrs: true } }),
       { side: D.box(3.9, 2.55, 0.7, 0.42) + D.box(2.0, 2.3, 0.5, 0.45), front: rect(0.4, 2.55, 0.7, 0.42, "k2") + rect(-1.3, 2.3, 0.5, 0.45, "k2"), H: 3.0 }),
   };
-
-  function t72(o) {
-    return F.armour({ hullL: 6.95, W: o.W || 3.59, hullH: 1.45, glacis: 1.5, eraHull: o.era, track: { n: 6, r: 0.375, returns: 3, sprocket: "rear", style: "steel", skirt: "rubber", skirtTop: 1.05 }, trackW: 0.58, drums: true,
-      turret: { x: 2.7, len: 2.9, w: 2.9, h: 0.8, shape: "dome", era: o.era, shtora: o.shtora, cupolaX: 3.4, cupolaR: 0.3, smoke: true }, gun: { len: 6.0, d: 0.18, evac: 0.5, sleeve: [0.25, 0.55] } });
-  }
-  function t80(o) {
-    return F.armour({ hullL: 7.0, W: 3.6, hullH: 1.45, glacis: 1.5, eraHull: o.era, track: { n: 6, r: 0.335, returns: 5, sprocket: "rear", style: "rubber", skirt: "rubber", skirtTop: 1.0 }, trackW: 0.58, exhaust: true,
-      turret: { x: 2.8, len: 2.9, w: 2.9, h: 0.8, shape: "dome", era: o.era, cupolaX: 3.4, cupolaR: 0.3, smoke: true }, gun: { len: 6.0, d: 0.18, evac: 0.5, sleeve: [0.25, 0.55] } });
-  }
-  function leo2(a5) {
-    const v = F.armour({ hullL: 7.72, W: 3.7, hullH: 1.55, glacis: 1.2, track: { n: 7, r: 0.35, returns: 4, sprocket: "rear", style: "rubber", skirt: "panel", skirtTop: 1.2 }, trackW: 0.63, exhaust: true,
-      turret: { x: 3.4, len: 3.9, w: 3.5, h: 0.9, shape: "slab", bustle: 0.9, cupolaR: 0.35, cupolaX: 4.1, smoke: true }, gun: { len: 5.3, d: 0.19, evac: 0.42, mrs: true } });
-    // 2A5: spaced wedge armour on the turret front
-    return a5 ? add(v, { side: poly([[1.45, 1.55], [0.5, 1.75], [1.45, 2.45]]), top: poly([[1.45, -1.75], [0.3, 0], [1.45, 1.75]], "k2") + rot(D.barrel(0, 0, { len: 5.3, d: 0.19, evac: 0.42 }), 1.55, 0, 180), xmin: v.xmin }) : v;
-  }
 
   // ============================================================ IFV / APC
   function bmp2() {
@@ -193,26 +167,6 @@
     });
   }
 
-  // ================================================================= SPAAG
-  function shilka() {
-    const v = F.armour({ hullL: 6.5, W: 3.1, hullH: 1.35, glacis: 1.3, track: { n: 6, r: 0.33, sprocket: "rear", style: "steel" }, trackW: 0.42 });
-    const t = boxTurret(1.7, 3.0, 1.35, 0.75, 2.95);
-    let side = t.side, top = t.top, front = t.front;
-    for (const yo of [0, 0.22]) side += rot(D.barrel(0, 0, { len: 2.1, d: 0.05, sleeve: [0.3] }), 1.9, 1.75 + yo, 180 - 18);
-    for (const y of [-0.55, -0.35, 0.35, 0.55]) top += rot(D.barrel(0, 0, { len: 2.0, d: 0.05 }), 1.9, y, 180);
-    front += muzzles([-0.55, -0.35, 0.35, 0.55], 2.25, 0.05) + muzzles([-0.55, -0.35, 0.35, 0.55], 2.05, 0.05);
-    const r = radar({ x: 4.3, y: 2.1, w: 1.5, kind: "dish", mast: 0.5 });
-    return add(v, { side: side + r.side, top: top + r.top, front: front + r.front, H: r.H, xmin: -0.3 });
-  }
-  function zsu57() {
-    const v = F.armour({ hullL: 6.22, W: 3.27, hullH: 1.45, glacis: 1.3, track: { n: 4, r: 0.41, sprocket: "rear", style: "spoked" }, trackW: 0.58 });
-    const t = boxTurret(2.0, 3.0, 1.45, 1.0, 2.8);
-    let side = t.side + rot(D.barrel(0, 0, { len: 4.3, d: 0.09, brake: true, sleeve: [0.2] }), 2.3, 2.05, 180 - 12);
-    const top = t.top + rot(D.barrel(0, 0, { len: 4.2, d: 0.09, brake: true }), 2.3, -0.35, 180) + rot(D.barrel(0, 0, { len: 4.2, d: 0.09, brake: true }), 2.3, 0.35, 180);
-    const front = t.front + muzzles([-0.35, 0.35], 2.95, 0.09);
-    side += rect(2.2, 2.45, 2.7, 0.04, "k3");                                                                  // open-top rim
-    return add(v, { side, top, front, H: 3.0, xmin: 2.3 - 4.7 * COS(12) });
-  }
   function tunguska() {
     const v = F.armour({ hullL: 7.93, W: 3.24, hullH: 1.75, glacis: 1.3, track: { n: 6, r: 0.35, returns: 3, sprocket: "rear", style: "steel" }, trackW: 0.5, exhaust: true });
     const t = boxTurret(2.4, 3.0, 1.75, 1.05, 2.6);
@@ -303,57 +257,6 @@
     return add(v, { side: t.side + m.side, top: t.top + m.top, front: t.front + m.front + range(0, 1, 2).map((j) => circ(-0.92 + j * 0.15, 2.3, 0.05, "k3", false) + circ(0.78 + j * 0.15, 2.3, 0.05, "k3", false)).join(""), H: 2.65 });
   }
 
-  // ======================================================== SAM launchers
-  function sa6() {
-    const v = F.armour({ hullL: 7.39, W: 3.18, hullH: 1.45, glacis: 1.4, track: { n: 6, r: 0.33, returns: 0, sprocket: "rear", style: "steel" }, trackW: 0.45 });
-    const base = poly([[2.8, 1.45], [2.9, 1.75], [5.2, 1.75], [5.3, 1.45]]);
-    const m = rack({ L: 5.8, d: 0.33, tx: 5.6, ty: 2.1, elev: 12, cols: [-0.95, 0, 0.95], fin: 1.4, canards: true });
-    return add(v, { side: base + rect(4.9, 1.75, 0.3, 0.45, "k2") + m.side, top: rect(2.8, -1.4, 2.5, 2.8, "k1") + m.top, front: rect(-1.4, 1.45, 2.8, 0.3, "k1") + rect(-1.1, 1.75, 2.2, 0.35, "k2") + m.front, H: m.H, xmin: m.xmin });
-  }
-  function sa11() {
-    const v = F.armour({ hullL: 9.3, W: 3.25, hullH: 1.7, glacis: 1.4, track: { n: 6, r: 0.37, returns: 3, sprocket: "front", style: "steel" }, trackW: 0.5, exhaust: true });
-    const base = poly([[3.1, 1.7], [3.2, 2.05], [7.5, 2.05], [7.6, 1.7]]);
-    const m = rack({ L: 5.55, d: 0.4, tx: 7.6, ty: 2.45, elev: 10, cols: [-1.0, -0.4, 0.4, 1.0], fin: 1.0, canards: false });
-    const r = { side: poly([[2.4, 2.05], [2.3, 3.2], [3.0, 3.6], [3.4, 3.6], [3.4, 2.05]]) + D.dish(2.35, 2.85, 1.3, 98), top: rect(2.3, -0.75, 1.1, 1.5, "k1"), front: path(`M -0.7 2.05 L -0.75 3.0 Q 0 3.8 0.75 3.0 L 0.7 2.05 Z`) + circ(0, 2.95, 0.55, "k3", false) };
-    return add(v, { side: base + m.side + r.side, top: rect(3.1, -1.4, 4.5, 2.8, "k1") + m.top + r.top, front: rect(-1.4, 1.7, 2.8, 0.35, "k1") + m.front + r.front, H: Math.max(m.H, 3.8), xmin: m.xmin });
-  }
-  function maz543(canisters, n) {
-    // 8x8 MAZ-543 with split cabs, launcher body behind.
-    const L = 13.0, W = 3.05, r = 0.78;
-    const axles = [1.6, 3.9, 7.4, 9.6];
-    let side = rect(0.2, 1.1, L - 0.4, 0.4, "k2");
-    side += path(`M 0.4 1.1 A 1.2 1.2 0 0 0 2.8 1.1`, "k2", false) + path(`M 2.7 1.1 A 1.2 1.2 0 0 0 5.1 1.1`, "k2", false) + path(`M 6.2 1.1 A 1.2 1.2 0 0 0 8.6 1.1`, "k2", false) + path(`M 8.4 1.1 A 1.2 1.2 0 0 0 10.8 1.1`, "k2", false);
-    side += D.wheelsSide(axles, r);
-    side += poly([[0, 1.2], [0, 2.6], [0.4, 2.95], [2.0, 2.95], [2.1, 1.2]]) + poly([[0.12, 2.8], [0.1, 2.15], [1.0, 2.15], [1.0, 2.8]], "k2") + rect(1.15, 2.15, 0.75, 0.6, "k3");
-    side += poly([[2.2, 1.5], [2.2, 2.7], [3.5, 2.7], [3.5, 1.5]], "k1") + D.grille(2.3, 3.4, 1.7, 0.6, 10);
-    let top = rect(0.1, -W / 2, 2.0, 1.25, "k1") + rect(0.1, W / 2 - 1.25, 2.0, 1.25, "k1") + rect(2.2, -0.6, 1.3, 1.2, "k2") + rect(3.6, -W / 2, L - 3.7, W, "k1");
-    for (const x of axles) top += rect(x - r, -W / 2 - 0.05, 2 * r, 0.45, "k2") + rect(x - r, W / 2 - 0.4, 2 * r, 0.45, "k2");
-    let front = rect(-W / 2, 1.2, 1.25, 1.75, "k1") + rect(W / 2 - 1.25, 1.2, 1.25, 1.75, "k1") + rect(-W / 2 + 0.1, 2.15, 1.05, 0.6, "k2") + rect(W / 2 - 1.15, 2.15, 1.05, 0.6, "k2")
-      + rect(-0.25, 1.4, 0.5, 1.3, "k2") + rect(-W / 2, 0, 0.45, 2 * r, "k1") + rect(W / 2 - 0.45, 0, 0.45, 2 * r, "k1") + D.light(-1.4, 1.35) + D.light(1.15, 1.35);
-    // canisters in travel position (pivot at the rear)
-    const m = rack({ L: canisters, d: 0.75, tx: L - 0.1, ty: 2.15, elev: 0, kind: "canister", rows: 2, cols: n === 4 ? [-0.4, 0.4] : [0], ribs: 6, gap: 1.05 });
-    side += rect(3.6, 1.5, L - 3.7, 0.6, "k1") + m.side + rect(L - 0.5, 0.3, 0.25, 1.2, "k2");
-    top += m.top;
-    front += m.front;
-    return { side, top, front, xmin: -0.05, xmax: L, W, H: 3.8 };
-  }
-  function patriot() {
-    // M901 launching station on the M860 semi-trailer (tractor omitted).
-    const L = 10.4, W = 2.5, r = 0.5;
-    let side = poly([[0, 1.35], [0, 1.65], [L, 1.65], [L, 1.15], [8.0, 1.15], [7.6, 0.95], [1.4, 0.95], [1.4, 1.35]]);
-    side += rect(0.3, 1.65, 0.2, 0.35, "k3") + D.wheelsSide([8.0, 9.2], r) + rect(1.0, 0, 0.15, 1.0, "k2") + rect(0.8, 0, 0.55, 0.08, "k2");
-    side += D.box(2.0, 1.65, 1.6, 1.0);
-    const m = rack({ L: 5.8, d: 0.9, tx: 9.6, ty: 1.85, elev: 38, kind: "canister", rows: 2, cols: [-0.48, 0.48], ribs: 5, gap: 1.02 });
-    side += poly([[9.2, 1.65], [9.6, 1.85], [6.6, 1.65]], "k2") + m.side;
-    const top = rect(0, -W / 2, L, W, "k1") + rect(2.0, -0.8, 1.6, 1.6, "k2") + rect(7.5, -W / 2 - 0.05, 2.2, 0.4, "k2") + rect(7.5, W / 2 - 0.35, 2.2, 0.4, "k2") + m.top;
-    const front = rect(-W / 2, 0.95, W, 0.7, "k1") + rect(-W / 2, 0, 0.4, 1.0, "k1") + rect(W / 2 - 0.4, 0, 0.4, 1.0, "k1") + m.front;
-    return { side, top, front, xmin: Math.min(0, m.xmin), xmax: L, W, H: m.H };
-  }
-  function nasams() {
-    const v = F.truck({ L: 7.0, W: 2.5, r: 0.55, axles: [1.3, 4.6, 5.9], cabL: 2.0, cabH: 2.75 });
-    const m = rack({ L: 4.0, d: 0.5, tx: 6.9, ty: 1.55, elev: 30, kind: "canister", rows: 2, cols: [-0.8, 0, 0.8], ribs: 4, gap: 1.02 });
-    return add(v, { side: rect(2.4, 1.25, 4.5, 0.3, "k1") + m.side, top: rect(2.3, -1.2, 4.6, 2.4, "k1") + m.top, front: m.front, H: m.H, xmin: Math.min(-0.05, m.xmin) });
-  }
   function staticRail(o) {
     // Static rail launcher on a turntable (SA-2 SM-90, SA-3 5P73, Hawk M192).
     const { L, d, n, elev, booster } = o, h = o.h || 1.4, W = o.W || 3.2, c = COS(elev), sn = SIN(elev);
@@ -380,15 +283,6 @@
 
   // ============================================================ towed guns
   const TOWED = {
-    flak38: () => F.towedGun({ L: 4.1, W: 2.4, r: 0.35, mountH: 1.0, cruciform: true, gunLen: 2.0, d: 0.06, elev: 25, barrels: 4, shield: true, seat: true }),
-    flak36: () => F.towedGun({ L: 7.6, W: 2.3, r: 0.45, mountH: 1.6, cruciform: true, gunLen: 4.9, d: 0.14, elev: 30, shield: true, seat: true }),
-    flak41: () => F.towedGun({ L: 9.6, W: 2.4, r: 0.45, mountH: 1.7, cruciform: true, gunLen: 6.5, d: 0.15, elev: 30, shield: true, seat: true }),
-    "M45_Quadmount": () => F.towedGun({ L: 3.0, W: 2.1, r: 0.4, mountH: 1.2, cruciform: true, wheels: true, gunLen: 1.65, d: 0.05, elev: 20, barrels: 4, shieldW: 1.6, shield: true, seat: true }),
-    bofors40: () => F.towedGun({ L: 6.4, W: 2.0, r: 0.42, mountH: 1.35, cruciform: true, gunLen: 3.0, d: 0.09, elev: 25, seat: true, brake: true }),
-    QF_37_AA: () => F.towedGun({ L: 8.6, W: 2.4, r: 0.5, mountH: 1.7, cruciform: true, gunLen: 5.0, d: 0.15, elev: 30, seat: true }),
-    "ZU-23 Emplacement": () => F.towedGun({ L: 4.6, W: 1.8, r: 0.35, mountH: 0.95, cruciform: true, gunLen: 2.6, d: 0.05, elev: 20, barrels: 2, seat: true }),
-    "S-60_Type59_Artillery": () => F.towedGun({ L: 8.5, W: 2.1, r: 0.5, mountH: 1.5, cruciform: true, gunLen: 4.4, d: 0.09, elev: 25, shield: true, seat: true, brake: true }),
-    "KS-19": () => F.towedGun({ L: 9.5, W: 2.3, r: 0.55, mountH: 1.75, cruciform: true, gunLen: 5.6, d: 0.16, elev: 30, shield: true, seat: true, brake: true }),
     "LeFH_18-40-105": () => F.towedGun({ L: 6.0, W: 1.98, r: 0.62, mountH: 1.15, gunLen: 3.1, d: 0.14, elev: 12, shield: true, brake: true }),
     "M2A1-105": () => F.towedGun({ L: 5.9, W: 2.2, r: 0.55, mountH: 1.15, gunLen: 2.6, d: 0.15, elev: 12, shield: true }),
   };
@@ -513,11 +407,7 @@
       funnels: [{ x: 90, w: 10, h: 6, base: 7 }], guns: [{ x: 16, size: 3.2 }], launchers: [{ x: 38, len: 52, d: 1.6, kind: "tubes", n: 2, ang: 8, base: 0, w: 7 }, { x: 155, len: 8, d: 0.3, kind: "vls", w: 4 }] }),
     PERRY: () => F.ship({ L: 136, B: 13.7, boats: [36], freeboard: 6.5, draft: 4.5, blocks: [{ x: 20, len: 90, h: 7, w: 12 }, { x: 28, len: 20, h: 11, w: 9 }], masts: [{ x: 38, base: 11, h: 15, array: 4, dish: 3 }, { x: 60, base: 7, h: 12 }],
       funnels: [{ x: 66, w: 7, h: 5, base: 7 }], guns: [{ x: 58, size: 1.5, base: 7 }], launchers: [{ x: 8, len: 5, d: 1, kind: "rail", w: 1.4 }], heloDeck: true }),
-    TICONDEROG: () => F.ship({ L: 173, B: 16.8, boats: [52], freeboard: 7.5, draft: 6.0, blocks: [{ x: 38, len: 95, h: 8, w: 15 }, { x: 44, len: 28, h: 15, w: 13 }, { x: 98, len: 26, h: 13, w: 12 }], masts: [{ x: 58, base: 15, h: 16 }, { x: 108, base: 13, h: 12 }],
-      funnels: [{ x: 78, w: 8, h: 6, base: 8 }, { x: 92, w: 7, h: 5, base: 8 }], guns: [{ x: 14, size: 2.2 }, { x: 160, size: 2.2, aft: true }], launchers: [{ x: 22, len: 14, d: 0.3, kind: "vls", w: 5 }, { x: 135, len: 14, d: 0.3, kind: "vls", w: 5 }] }),
     "leander-gun-achilles": () => leander(), "leander-gun-andromeda": () => leander(), "leander-gun-ariadne": () => leander(),
-    USS_Arleigh_Burke_IIa: () => F.ship({ L: 155, B: 20, boats: [48], freeboard: 8, draft: 6.3, blocks: [{ x: 36, len: 80, h: 8, w: 17 }, { x: 40, len: 22, h: 16, w: 14 }], masts: [{ x: 56, base: 16, h: 16 }],
-      funnels: [{ x: 70, w: 8, h: 6, base: 8 }, { x: 94, w: 7, h: 5, base: 8 }], guns: [{ x: 14, size: 2.2 }], launchers: [{ x: 24, len: 10, d: 0.3, kind: "vls", w: 5 }, { x: 118, len: 12, d: 0.3, kind: "vls", w: 5 }], heloDeck: true }),
   };
   function leander() {
     return F.ship({ L: 113, B: 12.5, freeboard: 6.5, draft: 4.5, blocks: [{ x: 26, len: 50, h: 6, w: 10 }, { x: 30, len: 14, h: 10, w: 8 }], masts: [{ x: 40, base: 10, h: 12, array: 4 }, { x: 64, base: 6, h: 10 }],
@@ -529,18 +419,11 @@
     ...TANK, ...TOWED, ...SHIP,
     "BMP-2": bmp2, "M-2 Bradley": () => bradley(false), "M6 Linebacker": () => bradley(true), "M-113": () => m113(),
     Sd_Kfz_251: () => halftrack(false), M2A1_halftrack: () => halftrack(true), "BTR-60": btr60,
-    "ZSU-23-4 Shilka": shilka, ZSU_57_2: zsu57, "2S6 Tunguska": tunguska, Gepard: gepard, Vulcan: vulcan,
+    "2S6 Tunguska": tunguska, Gepard: gepard, Vulcan: vulcan,
     "Strela-10M3": strela10, "M48 Chaparral": chaparral, "Roland ADS": roland, "Tor 9A331": tor, "Osa 9A33 ln": osa,
     "Strela-1 9P31": strela1, "M1097 Avenger": avenger,
     "SA-18 Igla manpad": soldier, "SA-18 Igla-S manpad": soldier, "Soldier stinger": soldier,
-    "SA-2 Guideline": () => staticRail({ L: 10.6, d: 0.5, n: 1, elev: 30, booster: true, h: 2.0, W: 6.0 }),
     "SA-3 Goa": () => staticRail({ L: 6.1, d: 0.38, n: 4, elev: 25, booster: true, h: 1.5, W: 4.0 }),
-    "MIM-23 Hawk": () => staticRail({ L: 5.0, d: 0.36, n: 3, elev: 25, h: 1.3, W: 4.0 }),
-    "SA-6 Gainful": sa6, "SA-11 Gadfly": sa11,
-    "SA-10 Grumble": () => maz543(7.25, 4), "SA-20 Gargoyle": () => maz543(7.5, 4), "SA-20B Gargoyle": () => maz543(7.5, 4),
-    "MIM-104 Patriot": patriot, NASAMS: nasams,
-    "88mm Flak battery": TOWED.flak36, "Heavy Flak battery": TOWED.flak41, "3.7-inch AA battery": TOWED.QF_37_AA,
-    "Heavy AA battery": TOWED.QF_37_AA, "Radar-directed AAA": TOWED["KS-19"],
     "p-19 s-125 sr": () => truckRadar({ L: 7.0, aw: 6.0, ah: 1.4, mast: 1.4, ax: 4.8 }),
     "1L13 EWR": () => boxSpring(17, 6, 9, 10), "55G6 EWR": () => boxSpring(28, 8, 10, 12),
     "FuMG-401": freya, "FPS-117": fps117,
@@ -548,11 +431,7 @@
   };
   // What the drawing shows when a battery or site is represented by one unit.
   const SHOWS = {
-    "88mm Flak battery": "8.8 cm Flak 36", "Heavy Flak battery": "8.8 cm Flak 41", "3.7-inch AA battery": "QF 3.7-inch gun",
-    "Heavy AA battery": "QF 3.7-inch gun", "Radar-directed AAA": "KS-19 gun", "SA-2 Guideline": "SM-90 launcher",
-    "SA-3 Goa": "5P73 launcher", "MIM-23 Hawk": "M192 launcher", "SA-6 Gainful": "2P25 launcher", "SA-11 Gadfly": "9A310 TELAR",
-    "SA-10 Grumble": "5P85 launcher", "SA-20 Gargoyle": "5P85 launcher", "SA-20B Gargoyle": "5P85 launcher",
-    "MIM-104 Patriot": "M901 launcher", NASAMS: "NASAMS launcher", "M6 Linebacker": "M6 Linebacker",
+    "SA-3 Goa": "5P73 launcher", "M6 Linebacker": "M6 Linebacker",
     "SA-18 Igla manpad": "Igla gunner", "SA-18 Igla-S manpad": "Igla-S gunner", "Soldier stinger": "Stinger gunner",
   };
 
@@ -591,5 +470,5 @@
     };
   }
 
-  global.Draw3V = { render, has: (key) => key in SPECS, keys: () => Object.keys(SPECS) };
+  global.Draw3V = { render };
 })(window);

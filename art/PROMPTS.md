@@ -1322,26 +1322,26 @@ Landscape image, about 1.4:1.
 
 ## Artillery
 
-### MLRS M270 227mm  ->  `MLRS.png`
+### Mortar 2B11 120mm  ->  `2B11_mortar.png`
 
 Now: generated line drawing.
 
 ```
-Three orthographic views of the M270 MLRS multiple rocket launcher at exactly the same scale, no perspective:
+Three orthographic views of the 2B11 120 mm mortar at exactly the same scale, no perspective:
 - side view (left side, front pointing left) across the top
 - top-down plan view directly below it, front pointing left, lined up so the front and
   rear sit at the same horizontal positions as in the side view
 - front view (looking straight at the front) to the right of the plan view
 
-Facing forward, any turret or launcher pointing forward in its travel position.
+In firing positionFacing forward, any turret or launcher pointing forward in its travel position..
 
-Real proportions (approximate): length 7 m, width 3 m, height 2.6 m.
-In the plan view it must be 2.3x as long as it is wide.
-In the side view it must be 2.7x as long as it is tall.
+Real proportions (approximate): length 1.9 m, width 1 m, height 1.4 m.
+In the plan view it must be 1.9x as long as it is wide.
+In the side view it must be 1.4x as long as it is tall.
 
 Distinctive features that must be correct:
-- tracked chassis with six road wheels per side, armoured cab at the front
-- a large box launcher on the back holding two pods of six rocket tubes
+- a mortar tube on a round base plate, held up by a bipod with a sight
+- no wheels or carriage
 
 Style: a technical line drawing like a published scale-modelling plan. Black lines only on a
 pure white background (#FFFFFF). Uniform thin lines for detail, slightly heavier outlines.
@@ -1380,12 +1380,12 @@ Draw each view ONCE. Views must not overlap and must have plenty of white margin
 Landscape image, about 1.4:1.
 ```
 
-### Mortar 2B11 120mm  ->  `2B11_mortar.png`
+### FH LeFH-18 105mm  ->  `LeFH_18_40_105.png`
 
 Now: generated line drawing.
 
 ```
-Three orthographic views of the 2B11 120 mm mortar at exactly the same scale, no perspective:
+Three orthographic views of the German leFH 18/40 105 mm towed howitzer at exactly the same scale, no perspective:
 - side view (left side, front pointing left) across the top
 - top-down plan view directly below it, front pointing left, lined up so the front and
   rear sit at the same horizontal positions as in the side view
@@ -1393,43 +1393,13 @@ Three orthographic views of the 2B11 120 mm mortar at exactly the same scale, no
 
 In firing positionFacing forward, any turret or launcher pointing forward in its travel position..
 
-Real proportions (approximate): length 1.9 m, width 1 m, height 1.4 m.
-In the plan view it must be 1.9x as long as it is wide.
-In the side view it must be 1.4x as long as it is tall.
+Real proportions (approximate): length 6.1 m, width 2 m, height 1.9 m.
+In the plan view it must be 3x as long as it is wide.
+In the side view it must be 3.2x as long as it is tall.
 
 Distinctive features that must be correct:
-- a mortar tube on a round base plate, held up by a bipod with a sight
-- no wheels or carriage
-
-Style: a technical line drawing like a published scale-modelling plan. Black lines only on a
-pure white background (#FFFFFF). Uniform thin lines for detail, slightly heavier outlines.
-ABSOLUTELY NO grid, NO text of any kind, NO labels, NO arrows, NO callouts, NO title block,
-NO scale bar, NO dimensions, NO border, NO paper texture, NO colour, NO shading, NO shadows.
-Draw each view ONCE. Views must not overlap and must have plenty of white margin.
-Landscape image, about 1.4:1.
-```
-
-### SPH 2S19 Msta 152mm  ->  `SAU_Msta.png`
-
-Now: generated line drawing.
-
-```
-Three orthographic views of the 2S19 Msta-S self-propelled howitzer at exactly the same scale, no perspective:
-- side view (left side, front pointing left) across the top
-- top-down plan view directly below it, front pointing left, lined up so the front and
-  rear sit at the same horizontal positions as in the side view
-- front view (looking straight at the front) to the right of the plan view
-
-Facing forward, any turret or launcher pointing forward in its travel position.
-
-Real proportions (approximate): length 6.7 m (11.9 m including the gun), width 3.6 m, height 3 m.
-In the plan view it must be 1.9x as long as it is wide (not counting the gun).
-In the side view it must be 2.2x as long as it is tall.
-
-Distinctive features that must be correct:
-- tracked chassis with six road wheels per side
-- very large, tall boxy turret
-- long 152 mm gun with a fume extractor and a muzzle brake
+- two wheels, split trail with two long legs spread on the ground
+- gun shield, barrel with a double-baffle muzzle brake
 
 Style: a technical line drawing like a published scale-modelling plan. Black lines only on a
 pure white background (#FFFFFF). Uniform thin lines for detail, slightly heavier outlines.
@@ -1498,26 +1468,26 @@ Draw each view ONCE. Views must not overlap and must have plenty of white margin
 Landscape image, about 1.4:1.
 ```
 
-### FH LeFH-18 105mm  ->  `LeFH_18_40_105.png`
+### MLRS M270 227mm  ->  `MLRS.png`
 
 Now: generated line drawing.
 
 ```
-Three orthographic views of the German leFH 18/40 105 mm towed howitzer at exactly the same scale, no perspective:
+Three orthographic views of the M270 MLRS multiple rocket launcher at exactly the same scale, no perspective:
 - side view (left side, front pointing left) across the top
 - top-down plan view directly below it, front pointing left, lined up so the front and
   rear sit at the same horizontal positions as in the side view
 - front view (looking straight at the front) to the right of the plan view
 
-In firing positionFacing forward, any turret or launcher pointing forward in its travel position..
+Facing forward, any turret or launcher pointing forward in its travel position.
 
-Real proportions (approximate): length 6.1 m, width 2 m, height 1.9 m.
-In the plan view it must be 3x as long as it is wide.
-In the side view it must be 3.2x as long as it is tall.
+Real proportions (approximate): length 7 m, width 3 m, height 2.6 m.
+In the plan view it must be 2.3x as long as it is wide.
+In the side view it must be 2.7x as long as it is tall.
 
 Distinctive features that must be correct:
-- two wheels, split trail with two long legs spread on the ground
-- gun shield, barrel with a double-baffle muzzle brake
+- tracked chassis with six road wheels per side, armoured cab at the front
+- a large box launcher on the back holding two pods of six rocket tubes
 
 Style: a technical line drawing like a published scale-modelling plan. Black lines only on a
 pure white background (#FFFFFF). Uniform thin lines for detail, slightly heavier outlines.
@@ -1548,6 +1518,36 @@ Distinctive features that must be correct:
 - low amphibious tracked chassis with seven road wheels per side
 - turret at the back of the hull
 - 122 mm gun with a double-baffle muzzle brake
+
+Style: a technical line drawing like a published scale-modelling plan. Black lines only on a
+pure white background (#FFFFFF). Uniform thin lines for detail, slightly heavier outlines.
+ABSOLUTELY NO grid, NO text of any kind, NO labels, NO arrows, NO callouts, NO title block,
+NO scale bar, NO dimensions, NO border, NO paper texture, NO colour, NO shading, NO shadows.
+Draw each view ONCE. Views must not overlap and must have plenty of white margin.
+Landscape image, about 1.4:1.
+```
+
+### SPH 2S19 Msta 152mm  ->  `SAU_Msta.png`
+
+Now: generated line drawing.
+
+```
+Three orthographic views of the 2S19 Msta-S self-propelled howitzer at exactly the same scale, no perspective:
+- side view (left side, front pointing left) across the top
+- top-down plan view directly below it, front pointing left, lined up so the front and
+  rear sit at the same horizontal positions as in the side view
+- front view (looking straight at the front) to the right of the plan view
+
+Facing forward, any turret or launcher pointing forward in its travel position.
+
+Real proportions (approximate): length 6.7 m (11.9 m including the gun), width 3.6 m, height 3 m.
+In the plan view it must be 1.9x as long as it is wide (not counting the gun).
+In the side view it must be 2.2x as long as it is tall.
+
+Distinctive features that must be correct:
+- tracked chassis with six road wheels per side
+- very large, tall boxy turret
+- long 152 mm gun with a fume extractor and a muzzle brake
 
 Style: a technical line drawing like a published scale-modelling plan. Black lines only on a
 pure white background (#FFFFFF). Uniform thin lines for detail, slightly heavier outlines.

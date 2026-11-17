@@ -8,8 +8,7 @@
 (function (global) {
   "use strict";
   const D = global.Draw3VParts;
-  const { poly, line, seg, circ, rect, path, grp, rot, range } = D;
-  const flipX = (s, x, y) => grp(s, `translate(${x} ${y}) scale(-1 1)`);
+  const { poly, line, seg, circ, rect, path, rot, range } = D;
 
   // ================================================================ armour
   /* p: hullL W hullH H, track{n r returns sprocket skirt style interleave},
@@ -29,7 +28,6 @@
     for (const b of p.fenderBoxes || []) side += D.box(b[0], topY + 0.11, b[1], 0.3);
     if (p.drums) side += circ(hL - 0.25, hH + 0.28, 0.28, "k2") + circ(hL - 0.25, hH + 0.28, 0.22, "k3", false);
     if (p.exhaust) side += D.grille(hL - 1.6, hL - 0.9, hH - 0.35, 0.18, 8);
-    if (p.eraHull) side += D.eraRows(0.3, g - 0.05, topY * 0.85, hH - 0.05, 5, 1);
     if (p.rearDoor) side += rect(hL - 0.05, topY * 0.7, 0.05, hH - topY * 0.8, "k2");
     let tx0 = 0, tx1 = 0, ty1 = hH, gx = 0, gy = hH;
     if (T) {
@@ -46,7 +44,6 @@
       side += poly(shape);
       side += seg(tx0 + 0.1, hH + 0.06, tx1 - 0.1, hH + 0.06, "k3");
       if (T.era) side += D.eraRows(tx0 + 0.08, tx0 + L * 0.42, hH + h * 0.12, hH + h * 0.82, 4, 2);
-      if (T.shtora) side += D.box(tx0 + 0.15, hH + h * 0.3, 0.45, 0.32);
       if (T.smoke) side += D.smokeLaunchers(tx0 + L * 0.35, hH + h * 0.55, 4);
       if (T.ir) side += D.box(tx0 - 0.05, hH + h * 0.6, 0.38, 0.3) + D.circ(tx0 - 0.08, hH + h * 0.75, 0.13, "k2");
       if (T.cupola !== false) side += D.cupola(T.cupolaX || T.x + L * 0.15, hH + h * 0.95, T.cupolaR || 0.32, T.cupolaH || 0.22, T.mg !== false);
@@ -88,7 +85,6 @@
       if (T.shape === "dome" || T.shape === "cast") front += path(`M ${-tw} ${hH} Q ${-tw} ${hH + h * 0.9} ${-tw * 0.4} ${hH + h} L ${tw * 0.4} ${hH + h} Q ${tw} ${hH + h * 0.9} ${tw} ${hH} Z`);
       else front += poly([[-tw, hH], [-tw * 0.95, hH + h * 0.85], [-tw * 0.75, hH + h], [tw * 0.75, hH + h], [tw * 0.95, hH + h * 0.85], [tw, hH]]);
       if (T.era) front += D.eraRows(-tw * 0.95, -tw * 0.3, hH + 0.08, hH + h * 0.8, 2, 2) + D.eraRows(tw * 0.3, tw * 0.95, hH + 0.08, hH + h * 0.8, 2, 2);
-      if (T.shtora) front += rect(-tw * 0.75, hH + h * 0.3, 0.3, 0.25, "k2") + rect(tw * 0.75 - 0.3, hH + h * 0.3, 0.3, 0.25, "k2");
       if (T.cupola !== false) front += rect(-0.3 + tw * 0.35, hH + h * 0.95, 0.6, T.cupolaH || 0.22, "k2");
       if (T.ir) front += D.circ(tw * 0.35, hH + h * 0.75, 0.16, "k2");
       if (G) front += rect(-0.2, gy - 0.18, 0.4, 0.36, "k2") + D.muzzle(0, gy, G.d);
@@ -157,28 +153,21 @@
   }
 
   // ============================================================ towed gun
-  /* p: L (overall), W, r (wheel), mountH (trunnion height), elev, gunLen, d, brake,
-   *    cruciform (AA platform) or split trail, barrels + cols, shield, seat, wheels */
+  /* A split-trail field gun. p: L (overall), W, r (wheel), mountH (trunnion height), elev,
+   *    gunLen, d, brake, barrels + cols, shield */
   function towedGun(p) {
     const W = p.W || 2.2, r = p.r || 0.42, e = p.elev, c = Math.cos(e * Math.PI / 180), sn = Math.sin(e * Math.PI / 180);
     const nb = p.barrels || 1, cols = p.cols || (nb >= 2 ? 2 : 1), rows = Math.ceil(nb / cols);
     const tH = p.mountH || 1.2, d = p.d;
     const fwd = p.gunLen * 0.82, aft = p.gunLen * 0.18;          // barrel ahead of / breech behind the trunnion
-    const tX = p.cruciform ? p.L * 0.5 : fwd * c + 0.3;
-    const bsp = Math.max(d * 2.6, 0.17), shW = p.shieldW || Math.min(W * 0.85, 2.0);
+    const tX = fwd * c + 0.3;
+    const bsp = Math.max(d * 2.6, 0.17), shW = Math.min(W * 0.85, 2.0);
     const colY = (i) => (i - (cols - 1) / 2) * bsp;
     let side = "", top = "", front = "";
     // ---- side
-    if (p.cruciform) {
-      side += rect(p.L * 0.06, 0.28, p.L * 0.88, 0.14, "k1") + seg(p.L * 0.08, 0.35, p.L * 0.92, 0.35, "k3");
-      for (const x of [p.L * 0.08, p.L * 0.92]) side += poly([[x - 0.2, 0], [x + 0.2, 0], [x + 0.08, 0.28], [x - 0.08, 0.28]], "k2") + seg(x, 0.42, x, 0.62, "k2") + seg(x - 0.12, 0.62, x + 0.12, 0.62, "k3");
-      if (p.wheels) for (const x of [p.L * 0.2, p.L * 0.8]) side += D.wheel(x, r, r, "tyre");
-      side += poly([[tX - 0.55, 0.42], [tX - 0.32, tH - 0.45], [tX + 0.32, tH - 0.45], [tX + 0.55, 0.42]]) + seg(tX - 0.45, 0.6, tX + 0.45, 0.6, "k3");
-    } else {
-      side += poly([[tX - 0.05, r + 0.05], [p.L - 0.35, 0.16], [p.L, 0.02], [p.L, 0.2], [p.L - 0.3, 0.3], [tX + 0.25, r + 0.28]]) + poly([[p.L - 0.3, 0.3], [p.L - 0.22, -0.12], [p.L - 0.05, -0.12], [p.L, 0.2]], "k2");
-      side += seg(tX + 0.3, r + 0.2, p.L - 0.4, 0.24, "k3") + rect(p.L - 0.75, 0.24, 0.3, 0.08, "k3");
-      side += poly([[tX - 0.3, r - 0.1], [tX - 0.22, tH - 0.25], [tX + 0.35, tH - 0.25], [tX + 0.45, r - 0.1]]);
-    }
+    side += poly([[tX - 0.05, r + 0.05], [p.L - 0.35, 0.16], [p.L, 0.02], [p.L, 0.2], [p.L - 0.3, 0.3], [tX + 0.25, r + 0.28]]) + poly([[p.L - 0.3, 0.3], [p.L - 0.22, -0.12], [p.L - 0.05, -0.12], [p.L, 0.2]], "k2");
+    side += seg(tX + 0.3, r + 0.2, p.L - 0.4, 0.24, "k3") + rect(p.L - 0.75, 0.24, 0.3, 0.08, "k3");
+    side += poly([[tX - 0.3, r - 0.1], [tX - 0.22, tH - 0.25], [tX + 0.35, tH - 0.25], [tX + 0.45, r - 0.1]]);
     if (p.shield) side += poly([[tX - 0.42, tH - 0.62], [tX - 0.58, tH + 0.52], [tX - 0.46, tH + 0.78], [tX - 0.36, tH + 0.78], [tX - 0.32, tH - 0.62]]);
     side += poly([[tX - 0.5, tH - 0.45], [tX - 0.42, tH - 0.28], [tX + 0.6, tH - 0.28], [tX + 0.68, tH - 0.45]]);
     side += poly([[tX - 0.32, tH - 0.28], [tX - 0.08, tH + 0.14], [tX + 0.12, tH + 0.14], [tX + 0.36, tH - 0.28]]) + circ(tX, tH, 0.07, "k2");
@@ -190,39 +179,20 @@
         + D.barrel(0, y, { len: fwd, d, brake: p.brake, sleeve: [0.08, 0.35] });
     }
     side += rot(g, tX, tH, 180 - e);
-    if (p.seat) {
-      side += rect(tX + 0.5, tH - 0.2, 0.28, 0.06, "k2") + seg(tX + 0.64, tH - 0.2, tX + 0.6, tH - 0.45, "k3") + rect(tX + 0.72, tH - 0.14, 0.05, 0.3, "k3");
-      side += circ(tX + 0.3, tH - 0.1, 0.14, "k2") + circ(tX + 0.3, tH - 0.1, 0.03, "k3", false) + seg(tX + 0.18, tH - 0.1, tX + 0.42, tH - 0.1, "k3") + seg(tX + 0.3, tH - 0.22, tX + 0.3, tH + 0.02, "k3");
-    }
-    if (!p.cruciform) side += D.wheel(tX, r, r, "tyre");
+    side += D.wheel(tX, r, r, "tyre");
     // ---- plan
-    if (p.cruciform) {
-      top += rect(p.L * 0.06, -0.09, p.L * 0.88, 0.18, "k1") + rect(tX - 0.09, -W / 2, 0.18, W, "k1");
-      for (const [x, y] of [[p.L * 0.08, 0], [p.L * 0.92, 0], [tX, -W / 2 + 0.1], [tX, W / 2 - 0.1]]) top += circ(x, y, 0.2, "k2") + circ(x, y, 0.07, "k3", false);
-      top += circ(tX, 0, 0.6) + circ(tX, 0, 0.5, "k3", false);
-    } else {
-      for (const sg of [-1, 1]) top += poly([[tX + 0.2, sg * 0.08], [p.L, sg * W * 0.38], [p.L, sg * (W * 0.38 + 0.18)], [tX + 0.2, sg * 0.28]], "k1") + rect(p.L - 0.25, sg > 0 ? W * 0.38 - 0.1 : -W * 0.38 - 0.28, 0.25, 0.38, "k2");
-      top += rect(tX - r, -W / 2, 2 * r, 0.26, "k1") + rect(tX - r, W / 2 - 0.26, 2 * r, 0.26, "k1") + seg(tX, -W / 2 + 0.26, tX, W / 2 - 0.26, "k2");
-      top += rect(tX - 0.3, -0.45, 0.75, 0.9, "k1");
-    }
-    if (p.seat) top += rect(tX + 0.45, -0.75, 0.3, 0.25, "k2") + rect(tX + 0.45, 0.5, 0.3, 0.25, "k2") + seg(tX + 0.3, -0.62, tX + 0.3, -0.42, "k2") + seg(tX + 0.3, 0.42, tX + 0.3, 0.62, "k2");
+    for (const sg of [-1, 1]) top += poly([[tX + 0.2, sg * 0.08], [p.L, sg * W * 0.38], [p.L, sg * (W * 0.38 + 0.18)], [tX + 0.2, sg * 0.28]], "k1") + rect(p.L - 0.25, sg > 0 ? W * 0.38 - 0.1 : -W * 0.38 - 0.28, 0.25, 0.38, "k2");
+    top += rect(tX - r, -W / 2, 2 * r, 0.26, "k1") + rect(tX - r, W / 2 - 0.26, 2 * r, 0.26, "k1") + seg(tX, -W / 2 + 0.26, tX, W / 2 - 0.26, "k2");
+    top += rect(tX - 0.3, -0.45, 0.75, 0.9, "k1");
     if (p.shield) top += path(`M ${tX - 0.42} ${-shW / 2} Q ${tX - 0.62} 0 ${tX - 0.42} ${shW / 2} L ${tX - 0.34} ${shW / 2} Q ${tX - 0.54} 0 ${tX - 0.34} ${-shW / 2} Z`);
     top += rect(tX - fwd * 0.42 * c, colY(0) - d * 1.4, (fwd * 0.42 + aft) * c, (cols - 1) * bsp + d * 2.8, "k1");
     for (let i = 0; i < cols; i++) top += rect(tX, colY(i) - d * 1.3, aft * c, d * 2.6, "k1") + rot(D.barrel(0, 0, { len: fwd * c, d, brake: p.brake, sleeve: [0.08] }), tX, colY(i), 180);
     // ---- front
-    if (p.cruciform) {
-      front += rect(-W / 2, 0.28, W, 0.14, "k1");
-      for (const x of [-W / 2 + 0.1, W / 2 - 0.1]) front += poly([[x - 0.2, 0], [x + 0.2, 0], [x + 0.08, 0.28], [x - 0.08, 0.28]], "k2") + seg(x, 0.42, x, 0.62, "k2") + seg(x - 0.12, 0.62, x + 0.12, 0.62, "k3");
-      if (p.wheels) front += rect(-W / 2 + 0.25, 0, 0.25, 2 * r, "k1") + rect(W / 2 - 0.5, 0, 0.25, 2 * r, "k1");
-      front += poly([[-0.55, 0.42], [-0.32, tH - 0.45], [0.32, tH - 0.45], [0.55, 0.42]]) + rect(-0.09, 0.28, 0.18, 0.14, "k2");
-    } else {
-      for (const sg of [-1, 1]) front += line([[sg * 0.25, r], [sg * W * 0.42, 0.05]], "k2");
-      front += rect(-W / 2 + 0.26, r - 0.06, W - 0.52, 0.12, "k1");
-      for (const x of [-W / 2, W / 2 - 0.26]) { front += rect(x, 0, 0.26, 2 * r, "k1"); for (const y of range(0.08, 2 * r - 0.08, 8)) front += seg(x, y, x + 0.26, y, "k3"); }
-      front += rect(-0.3, r - 0.1, 0.6, tH - r - 0.15, "k1");
-    }
+    for (const sg of [-1, 1]) front += line([[sg * 0.25, r], [sg * W * 0.42, 0.05]], "k2");
+    front += rect(-W / 2 + 0.26, r - 0.06, W - 0.52, 0.12, "k1");
+    for (const x of [-W / 2, W / 2 - 0.26]) { front += rect(x, 0, 0.26, 2 * r, "k1"); for (const y of range(0.08, 2 * r - 0.08, 8)) front += seg(x, y, x + 0.26, y, "k3"); }
+    front += rect(-0.3, r - 0.1, 0.6, tH - r - 0.15, "k1");
     front += rect(-0.5, tH - 0.45, 1.0, 0.17, "k1") + rect(-0.42, tH - 0.28, 0.13, 0.42, "k1") + rect(0.29, tH - 0.28, 0.13, 0.42, "k1");
-    if (p.seat) front += circ(-0.68, tH - 0.1, 0.14, "k2") + circ(0.68, tH - 0.1, 0.14, "k2") + rect(-0.98, tH - 0.2, 0.25, 0.06, "k2") + rect(0.73, tH - 0.2, 0.25, 0.06, "k2");
     if (p.shield) front += poly([[-shW / 2, tH - 0.62], [-shW / 2, tH + 0.52], [-shW / 2 + 0.15, tH + 0.78], [shW / 2 - 0.15, tH + 0.78], [shW / 2, tH + 0.52], [shW / 2, tH - 0.62]])
       + seg(-shW / 2 + 0.05, tH + 0.52, shW / 2 - 0.05, tH + 0.52, "k3") + rect(-(cols * bsp) / 2 - 0.08, tH - 0.25, cols * bsp + 0.16, 0.6, "k2");
     front += rect(colY(0) - d * 1.5, tH - 0.15, (cols - 1) * bsp + d * 3, Math.max(0.3, fwd * 0.42 * sn), "k1");
@@ -362,5 +332,5 @@
     return { side, top, front, xmin: -0.5, xmax: L, W: B, H, ymin: -dr };
   }
 
-  global.Draw3VFamilies = { armour, wheeled, truck, towedGun, ship, flipX };
+  global.Draw3VFamilies = { armour, wheeled, truck, towedGun, ship };
 })(window);
