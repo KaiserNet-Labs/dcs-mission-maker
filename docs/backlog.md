@@ -23,4 +23,10 @@ F-1 (Pillow 11 on the open kneeboard upload) and F-2 (sign-up races) were fixed 
 | F-15 | .github/workflows/windows.yml | `${{ github.ref_name }}` inside a pwsh double-quoted string (needs push access) | Pass it through `env:` |
 | F-16 | Dockerfile | Base image by tag; no provenance, signing or SBOM | Pin the base image by digest; provenance later |
 
+## Questions for the Owner
+
+- **Allow MPO uploads?** Some phones and cameras save JPEGs that Pillow reads as MPO (a JPEG with extra frames). The kneeboard upload refuses them, as it did before the Pillow 13 change. Allowing them means adding `"MPO"` to `IMAGE_FORMATS` in `app/kneeboard_store.py` (the JPEG decoder reads them; only the first frame is used), plus a test. Not decided; no change made.
+
+## Notes
+
 Not a Trial Finding: a claim made while an event's mission is being built is now kept on the sign-up sheet, but it isn't in that `.miz`. Generating again picks it up.
