@@ -1,0 +1,5 @@
+{
+  "baseBranch": "main",
+  "contextFiles": ["README.md", "THIRD_PARTY.md"],
+  "notes": "There is no CLAUDE.md; README.md is the project's guide (Security and Development sections). By design: every .env value is optional; without APP_PASSWORD the app is open to anyone who can reach it (meant for a LAN or VPN); with it, sign-up pages, the Briefing Room, mission downloads and the DCS server hook stay open, and their links are hard to guess but not secret. Third-party mission scripts, beacon data and fonts are downloaded by tools/fetch_vendor.py at pinned commits with SHA-256 checks; vendor/ is not in git. The image runs gunicorn as the unprivileged app user after docker-entrypoint.sh fixes volume ownership. The Windows app (windows/, PyInstaller, Inno Setup) is released by .github/workflows/release.yml on v*.*.* tags. Tests: python -m tests.api, python -m tests.smoke --quick (both inside the image), and luac5.1 -p on dcs-hook/ and the dumped mission Lua. On the Box the live app is not reachable; it runs on a separate Live Host."
+}
