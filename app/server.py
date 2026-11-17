@@ -406,7 +406,15 @@ def _load_event(eid):
 
 
 def _save_event(ev):
-    _event_path(ev["id"]).write_text(json.dumps(ev, indent=2), encoding="utf-8")
+    """In one step (a temp file, then a rename), so a reader never sees half a file.
+    Changes to an existing event happen under _locked(f"event-{id}"), reloading it first."""
+    path = _event_path(ev["id"])
+    tmp = path.with_name(f".{path.stem}.{secrets.token_hex(4)}.tmp")
+    try:
+        tmp.write_text(json.dumps(ev, indent=2), encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def _seats(cfg):
@@ -503,8 +511,11 @@ def _roll_over(ev):
         ev["next_id"] = nxt["id"]
         _save_event(ev)
     if nxt["post_discord"]:
-        nxt["discord"] = _announce_event(nxt)
-        _save_event(nxt)
+        result = _announce_event(nxt)
+        with _locked(f"event-{nxt['id']}"):  # pilots may claim seats from the post already
+            nxt = _load_event(nxt["id"])
+            nxt["discord"] = result
+            _save_event(nxt)
     return ev
 
 
@@ -534,22 +545,24 @@ def get_event(eid):
 
 @app.post("/api/events/<eid>/claim")
 def claim_seat(eid):
-    ev = _load_event(eid)
+    _event_path(eid)                                   # 404 before a lock file is named after eid
     body = request.get_json(force=True) or {}
     seat, name = body.get("seat", ""), re.sub(r"[^\w \-.']", "", body.get("name", ""))[:24].strip()
-    if seat not in [s["seat"] for s in _seats(ev["config"])]:
-        return jsonify({"error": "No such seat"}), 400
-    holder = ev["claims"].get(seat)
-    if not name:  # release
-        if holder and holder.lower() != (body.get("me") or "").lower():
-            return jsonify({"error": f"{holder} has that seat"}), 409
-        ev["claims"].pop(seat, None)
-    else:
-        if holder and holder.lower() != name.lower():
-            return jsonify({"error": f"{holder} already took {seat}"}), 409
-        ev["claims"] = {k: v for k, v in ev["claims"].items() if v.lower() != name.lower()}
-        ev["claims"][seat] = name
-    _save_event(ev)
+    with _locked(f"event-{eid}"):                      # as the roster: one change at a time
+        ev = _load_event(eid)
+        if seat not in [s["seat"] for s in _seats(ev["config"])]:
+            return jsonify({"error": "No such seat"}), 400
+        holder = ev["claims"].get(seat)
+        if not name:  # release
+            if holder and holder.lower() != (body.get("me") or "").lower():
+                return jsonify({"error": f"{holder} has that seat"}), 409
+            ev["claims"].pop(seat, None)
+        else:
+            if holder and holder.lower() != name.lower():
+                return jsonify({"error": f"{holder} already took {seat}"}), 409
+            ev["claims"] = {k: v for k, v in ev["claims"].items() if v.lower() != name.lower()}
+            ev["claims"][seat] = name
+        _save_event(ev)
     return jsonify(_event_view(ev))
 
 
@@ -565,9 +578,13 @@ def event_generate(eid):
         result = build_and_store(cfg)
     except (MissionError, TypeError, ValueError) as e:
         return jsonify({"error": str(e)}), 400
-    ev["mission"] = {"filename": result["filename"], "url": result["url"],
-                     "briefing_url": result["briefing_url"]}
-    _save_event(ev)
+    # The build takes a while and pilots may claim seats meanwhile: save onto a fresh copy.
+    # (A claim made during the build is kept on the sheet but isn't in this .miz.)
+    with _locked(f"event-{eid}"):
+        ev = _load_event(eid)
+        ev["mission"] = {"filename": result["filename"], "url": result["url"],
+                         "briefing_url": result["briefing_url"]}
+        _save_event(ev)
     result.update(mission_store.keep(result["filename"][:-4]))   # the sign-up page links to it
     ev = _roll_over(ev)
     targets = (request.get_json(silent=True) or {}).get("publish") or []

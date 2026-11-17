@@ -33,7 +33,10 @@ MAX_LIBRARY = 40           # per aircraft type
 MAX_SIDE = (1536, 2048)    # uploads are kept up to twice the size of a generated page
 TYPE_ID = re.compile(r"[\w\-.]{1,60}")
 PAGE_ID = re.compile(r"[gunl]:[\w\-.]{1,80}")
-IMAGE_FORMATS = {"PNG", "JPEG", "WEBP", "GIF", "BMP"}
+IMAGE_FORMATS = ("PNG", "JPEG", "WEBP", "GIF", "BMP")  # the only decoders an upload may reach
+# Largest upload in pixels, checked from the header before decoding: 25 MP fits a 24 MP camera
+# photo or a 12 MP phone one, and caps one decode at about 100 MB (Pillow's own limit is 89 MP).
+MAX_PIXELS = 25_000_000
 
 
 class KneeboardError(ValueError):
@@ -309,12 +312,16 @@ def decode(data):
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
-            img = Image.open(io.BytesIO(data))
+            # formats=: other decoders (TIFF, PSD, ICO...) never see the bytes.
+            img = Image.open(io.BytesIO(data), formats=IMAGE_FORMATS)
             if img.format not in IMAGE_FORMATS:
                 raise KneeboardError("Upload a PNG, JPG or PDF.")
+            w, h = img.size
+            if w * h > MAX_PIXELS:
+                raise KneeboardError(f"That image is {w}x{h}; upload one under {MAX_PIXELS // 1_000_000} megapixels.")
             img.load()
     except (OSError, SyntaxError, Image.DecompressionBombError, Image.DecompressionBombWarning) as e:
-        raise KneeboardError("That file isn't an image or PDF that can be read.") from e
+        raise KneeboardError("That file isn't a PNG, JPG, WebP, GIF, BMP or PDF that can be read.") from e
     return [_fit(ImageOps.exif_transpose(img))]
 
 

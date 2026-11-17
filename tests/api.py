@@ -1,5 +1,6 @@
 """API checks: sign-ups, publishing, Discord (against a fake webhook), reports."""
 import base64
+import contextlib
 import datetime
 import http.server
 import io
@@ -12,6 +13,7 @@ import tempfile
 import threading
 import types
 import zipfile
+import zlib
 
 tmp = tempfile.mkdtemp()
 os.environ.update(OUTPUT_DIR=f"{tmp}/out", SERVER_MISSIONS_HOST_DIR="/x",
@@ -286,6 +288,81 @@ ok(len(got) == posts + 2, f"both occurrences announced on Discord ({len(got) - p
 for e in (wid, nxt["id"]):
     c.delete(f"/api/events/{e}")
 
+# Sign-ups change under the event's lock and save onto a fresh copy (Trial 2026-11-17-0931 F-2).
+from app import server as appsrv  # noqa: E402
+
+cfg2 = {**cfg, "flights": [{**cfg["flights"][0], "slots": 4}]}
+lid = c.post("/api/events", json={"title": "Race", "config": cfg2}).json["id"]
+real_load = appsrv._load_event
+both_read = threading.Barrier(2, timeout=2)
+
+
+def slow_load(eid):
+    ev = real_load(eid)
+    # Unlocked, both claims read the same copy and one is lost. Locked, the second claim
+    # waits for the first, so they never meet and the wait times out.
+    with contextlib.suppress(threading.BrokenBarrierError):
+        both_read.wait()
+    return ev
+
+
+appsrv._load_event = slow_load
+claims = [threading.Thread(target=lambda n=n, i=i: app.test_client().post(
+    f"/api/events/{lid}/claim", json={"seat": f"Viper 1-{i}", "name": n}))
+    for i, n in [(1, "Alpha"), (2, "Bravo")]]
+for t in claims:
+    t.start()
+for t in claims:
+    t.join()
+appsrv._load_event = real_load
+ok(real_load(lid)["claims"] == {"Viper 1-1": "Alpha", "Viper 1-2": "Bravo"},
+   f"two claims at the same moment both kept {real_load(lid)['claims']}")
+
+real_build = appsrv.build_and_store
+
+
+def build_with_late_claim(cfg):
+    c.post(f"/api/events/{lid}/claim", json={"seat": "Viper 1-3", "name": "Charlie"})  # mid-build
+    return real_build(cfg)
+
+
+appsrv.build_and_store = build_with_late_claim
+r = c.post(f"/api/events/{lid}/generate", json={})
+appsrv.build_and_store = real_build
+ev = real_load(lid)
+ok(r.status_code == 200 and ev["mission"] and ev["claims"].get("Viper 1-3") == "Charlie",
+   f"a claim made during the build stays on the sheet {r.status_code} {ev['claims']}")
+before = appsrv._event_path(lid).read_bytes()
+real_replace = appsrv.os.replace
+appsrv.os.replace = lambda *a: (_ for _ in ()).throw(OSError("disk gone"))   # dies before the rename
+with contextlib.suppress(OSError):
+    appsrv._save_event({**ev, "title": "half-written"})
+appsrv.os.replace = real_replace
+ok(appsrv._event_path(lid).read_bytes() == before, "a failed save leaves the event file as it was")
+ok(not list(appsrv.EVENTS_DIR.glob(".*.tmp")), "no temp files left behind")
+
+# The next weekly occurrence: a claim made while its Discord post is going out is kept.
+real_announce = appsrv._announce_event
+
+
+def announce_and_claim(ev):
+    out = real_announce(ev)
+    c.post(f"/api/events/{ev['id']}/claim", json={"seat": "Viper 1-1", "name": "Early"})
+    return out
+
+
+appsrv._announce_event = announce_and_claim
+wid = c.post("/api/events", json={"title": "Weekly", "config": cfg, "repeat": "weekly", "discord": True,
+                                  "when_iso": "2020-01-03T19:00:00Z"}).json["id"]
+nid = c.get(f"/api/events/{wid}").json.get("next_id")
+appsrv._announce_event = real_announce
+nxt = real_load(nid) if nid else {}
+ok(nxt.get("claims") == {"Viper 1-1": "Early"} and nxt.get("discord") == "ok",
+   f"claim during the next occurrence's announcement kept {nxt}")
+for e in (lid, wid, nid):
+    if e:
+        c.delete(f"/api/events/{e}")
+
 # Optional password: the builder and admin actions need it, what pilots use doesn't.
 os.environ["APP_PASSWORD"] = "hunter2"
 basic = {"Authorization": "Basic " + base64.b64encode(b"x:hunter2").decode()}
@@ -464,6 +541,34 @@ for junk, why in [(b"<html><script>alert(1)</script>", "not an image"), (b"%PDF-
     r = c.post(f"{kb_api}/F-16C_50/upload", content_type="multipart/form-data",
                data={"name": "Mitsu", "files": [(io.BytesIO(junk), "evil.png")]})
     ok(r.status_code == 400 and "evil.png" in r.json["error"], f"upload refused: {why} {r.json}")
+# Only the five allowed decoders see an upload, and huge images are refused from the header
+# before decoding (Trial 2026-11-17-0931 F-1).
+from PIL import TiffImagePlugin  # noqa: E402
+
+tiff_opened = []
+real_tiff_open = TiffImagePlugin.TiffImageFile._open
+TiffImagePlugin.TiffImageFile._open = lambda self: (tiff_opened.append(1), real_tiff_open(self))[1]
+r = c.post(f"{kb_api}/F-16C_50/upload", content_type="multipart/form-data",
+           data={"name": "Mitsu", "files": [(io.BytesIO(png("red", fmt="TIFF")), "scan.tiff")]})
+TiffImagePlugin.TiffImageFile._open = real_tiff_open
+ok(r.status_code == 400 and "scan.tiff" in r.json["error"], f"TIFF upload refused {r.status_code} {r.json}")
+ok(not tiff_opened, "the TIFF decoder never saw the upload")
+
+
+def png_claiming(w, h):
+    """A 1x1 PNG whose header says w x h: big on paper, a few bytes on the wire."""
+    data = bytearray(png("red", size=(1, 1)))
+    data[16:24] = w.to_bytes(4, "big") + h.to_bytes(4, "big")
+    data[29:33] = zlib.crc32(bytes(data[12:29])).to_bytes(4, "big")
+    return bytes(data)
+
+
+big = (6000, 5000)  # 30 MP: over the 25 MP cap, under Pillow's own 89 MP limit
+ok(big[0] * big[1] > kneeboard_store.MAX_PIXELS and big[0] * big[1] < Image.MAX_IMAGE_PIXELS, "cap is the smaller one")
+r = c.post(f"{kb_api}/F-16C_50/upload", content_type="multipart/form-data",
+           data={"name": "Mitsu", "files": [(io.BytesIO(png_claiming(*big)), "huge.png")]})
+ok(r.status_code == 400 and "huge.png" in r.json["error"] and "6000x5000" in r.json["error"],
+   f"too-large image refused before decoding {r.status_code} {r.json}")
 ok(c.post(f"{kb_api}/F-16C_50", json={"action": "delete", "name": "Mitsu", "id": "g:kneeboard_1"}).status_code == 400,
    "generated pages can only be hidden")
 r = c.post(f"{kb_api}/F-16C_50", json={"action": "delete", "name": "Mitsu", "id": up["id"]})
