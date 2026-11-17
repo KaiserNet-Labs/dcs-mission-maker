@@ -1,0 +1,26 @@
+# Backlog
+
+Known issues waiting for a fix, oldest first. Each line names where it came from.
+
+## From Full Trial 2026-11-17-0931 (F-3 to F-16; all Low, none blocks a Release)
+
+F-1 (Pillow 11 on the open kneeboard upload) and F-2 (sign-up races) were fixed before the first Release from the Box.
+
+| ID | Where | What | Suggested fix |
+|---|---|---|---|
+| F-3 | app/server.py `add_report` | `reports.json` is changed without a lock and not in one step; the 200-entry trim drops by insertion order; any `.miz` name is accepted | Lock and write atomically, pop-then-insert, accept only missions that exist |
+| F-4 | app/debrief.py `merge`; server.py `add_report`, `add_debrief` | Malformed bodies on the open hook endpoints (`/api/debrief`, `/api/reports`) raise 500s | Type checks, 400 on bad input |
+| F-5 | app/kneeboard_store.py `_decode_pdf`, library | A zero-size PDF page divides by zero; the squadron library has only the per-mission lock | Zero-size guard; a library-wide lock |
+| F-6 | app/server.py build; mission_store.py | A worker killed mid-build leaves a `.miz` with no meta file, treated as kept and never expired | Write the meta file at claim time, or let cleanup remove meta-less empty files |
+| F-7 | app/integrations.py `publish_sftp` | No connect timeout; the transport isn't closed on failure | `socket.create_connection(..., timeout=15)`, try/finally close |
+| F-8 | app/integrations.py `publish_sftp` | Any host key is accepted unless `SFTP_KNOWN_HOSTS` is set | Warn or refuse without a known-hosts file |
+| F-9 | requirements.txt | paramiko 3.* can't get the PYSEC-2026-2858 fix (SHA-1 in rsakey) | paramiko 5 after testing SFTP |
+| F-10 | app/server.py auth | No throttle on `APP_PASSWORD` attempts | Delay after failures, or advise a long password on Settings |
+| F-11 | tests/api.py | No structural test of the `PUBLIC_ENDPOINTS` split | One test walking `url_map` with a password set |
+| F-12 | app/templates/index.html, briefing.html | Leaflet from unpkg without SRI | Integrity hashes, or ship Leaflet with the app |
+| F-13 | requirements*.txt, ci.yml | Ranged pins, no hash lock, floating eslint in CI | Hash-locked requirements, pinned eslint |
+| F-14 | .github/workflows/*.yml | Actions on mutable tags; unpinned innosetup | Pin actions by SHA, pin innosetup |
+| F-15 | .github/workflows/windows.yml | `${{ github.ref_name }}` inside a pwsh double-quoted string (needs push access) | Pass it through `env:` |
+| F-16 | Dockerfile | Base image by tag; no provenance, signing or SBOM | Pin the base image by digest; provenance later |
+
+Not a Trial Finding: a claim made while an event's mission is being built is now kept on the sign-up sheet, but it isn't in that `.miz`. Generating again picks it up.
